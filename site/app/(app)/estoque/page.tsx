@@ -1,317 +1,328 @@
+// site/app/(app)/estoque/page.tsx
 "use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   addEstoqueItem,
+  addMovimentacao,
   deleteEstoqueItem,
+  EstoqueItem,
+  Movimentacao,
   loadDB,
-  updateEstoqueItem,
-  type EstoqueItem,
 } from "../lib/agroStore";
 
-function toNum(v: string) {
-  const n = Number(v.replace(",", "."));
-  return Number.isFinite(n) ? n : 0;
+function fmtData(iso: string) {
+  try {
+    return new Date(iso).toLocaleString("pt-BR");
+  } catch {
+    return iso;
+  }
 }
 
 export default function EstoquePage() {
   const [itens, setItens] = useState<EstoqueItem[]>([]);
-  const [busca, setBusca] = useState("");
+  const [movs, setMovs] = useState<Movimentacao[]>([]);
 
-  // form
+  // Form cadastro
   const [nome, setNome] = useState("");
-  const [unidade, setUnidade] = useState("un");
-  const [saldo, setSaldo] = useState("0");
-  const [minimo, setMinimo] = useState("0");
+  const [saldo, setSaldo] = useState<number>(0);
+  const [minimo, setMinimo] = useState<number>(0);
 
-  // edição simples
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editSaldo, setEditSaldo] = useState("0");
-  const [editMinimo, setEditMinimo] = useState("0");
+  // Movimentação
+  const [movItemId, setMovItemId] = useState<string>("");
+  const [movTipo, setMovTipo] = useState<"ENTRADA" | "SAIDA">("ENTRADA");
+  const [movQtd, setMovQtd] = useState<number>(0);
+  const [movObs, setMovObs] = useState("");
 
-  function refresh() {
+  // ✅ FUNÇÃO ÚNICA PARA RECARREGAR (o botão Atualizar usa isso)
+  function carregar() {
     const db = loadDB();
     setItens(db.estoque);
+    setMovs(db.movimentacoes);
+    // garante select apontando para algo válido
+    if (db.estoque.length > 0 && !db.estoque.some((x) => x.id === movItemId)) {
+      setMovItemId(db.estoque[0].id);
+    }
+    if (db.estoque.length === 0) setMovItemId("");
   }
 
   useEffect(() => {
-    refresh();
+    carregar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const filtrados = useMemo(() => {
-    const q = busca.trim().toLowerCase();
-    if (!q) return itens;
-    return itens.filter((i) => i.nome.toLowerCase().includes(q));
-  }, [itens, busca]);
-
-  const alertas = useMemo(() => {
-    return itens.filter((i) => i.saldo <= i.minimo);
+  const itensOrdenados = useMemo(() => {
+    return [...itens].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   }, [itens]);
 
-  function onAdd(e: React.FormEvent) {
-    e.preventDefault();
+  function alertaTexto(item: EstoqueItem) {
+    if ((item.saldo ?? 0) <= (item.minimo ?? 0)) return "Abaixo do mínimo";
+    return "OK";
+  }
+
+  function alertaClasse(item: EstoqueItem) {
+    if ((item.saldo ?? 0) <= (item.minimo ?? 0)) return "bg-red-100 text-red-700";
+    return "bg-green-100 text-green-700";
+  }
+
+  function onAdicionar() {
     if (!nome.trim()) return;
 
     addEstoqueItem({
       nome: nome.trim(),
-      unidade,
-      saldo: toNum(saldo),
-      minimo: toNum(minimo),
+      saldo: Number(saldo) || 0,
+      minimo: Number(minimo) || 0,
     });
 
     setNome("");
-    setUnidade("un");
-    setSaldo("0");
-    setMinimo("0");
-    refresh();
+    setSaldo(0);
+    setMinimo(0);
+
+    // ✅ recarrega depois de salvar
+    carregar();
   }
 
-  function startEdit(item: EstoqueItem) {
-    setEditId(item.id);
-    setEditSaldo(String(item.saldo));
-    setEditMinimo(String(item.minimo));
+  function onExcluir(id: string) {
+    deleteEstoqueItem(id);
+    carregar();
   }
 
-  function saveEdit() {
-    if (!editId) return;
-    updateEstoqueItem(editId, { saldo: toNum(editSaldo), minimo: toNum(editMinimo) });
-    setEditId(null);
-    refresh();
+  function onMovimentar() {
+    if (!movItemId) return;
+
+    addMovimentacao({
+      itemId: movItemId,
+      tipo: movTipo,
+      quantidade: Number(movQtd) || 0,
+      observacao: movObs,
+    });
+
+    setMovQtd(0);
+    setMovObs("");
+    carregar();
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 p-6 text-gray-900">
-      <div className="mx-auto max-w-6xl">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Estoque</h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Cadastre itens, acompanhe saldo e receba alertas de mínimo.
-            </p>
-          </div>
+    <main className="min-h-screen bg-gray-50 p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Estoque</h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Aqui vamos listar produtos/insumos, saldo, mínimo e movimentações.
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+          {/* ✅ BOTÃO ATUALIZAR FUNCIONANDO */}
+          <button
+            onClick={() => carregar()}
+            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm text-gray-800 hover:bg-gray-100"
+          >
+            Atualizar
+          </button>
 
           <Link
             href="/dashboard"
-            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-100"
+            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm text-gray-800 hover:bg-gray-100"
           >
             Voltar
           </Link>
         </div>
+      </div>
 
-        {/* topo: alertas */}
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          <div className="rounded-lg bg-white p-4 shadow">
-            <p className="text-sm text-gray-600">Itens cadastrados</p>
-            <p className="mt-1 text-2xl font-bold">{itens.length}</p>
-          </div>
-          <div className="rounded-lg bg-white p-4 shadow">
-            <p className="text-sm text-gray-600">Em alerta (≤ mínimo)</p>
-            <p className="mt-1 text-2xl font-bold">{alertas.length}</p>
-            {alertas.length > 0 && (
-              <p className="mt-1 text-sm text-red-600">
-                Verifique os itens com saldo baixo.
-              </p>
-            )}
-          </div>
-          <div className="rounded-lg bg-white p-4 shadow">
-            <p className="text-sm text-gray-600">Buscar item</p>
+      {/* CADASTRAR */}
+      <section className="mt-6 rounded-lg bg-white p-4 shadow">
+        <h2 className="text-lg font-semibold text-gray-900">Cadastrar item</h2>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div>
+            <label className="text-sm text-gray-700">Nome</label>
             <input
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Ex: sal mineral"
-              className="mt-2 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              placeholder="Ex: Sal mineral, Milho, Vacina..."
+            />
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-700">Saldo</label>
+            <input
+              type="number"
+              value={saldo}
+              onChange={(e) => setSaldo(Number(e.target.value))}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-700">Mínimo</label>
+            <input
+              type="number"
+              value={minimo}
+              onChange={(e) => setMinimo(Number(e.target.value))}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
             />
           </div>
         </div>
 
-        {/* cadastro */}
-        <div className="mt-6 rounded-lg bg-white p-4 shadow">
-          <h2 className="text-lg font-semibold">Cadastrar item</h2>
+        <button
+          onClick={onAdicionar}
+          className="mt-4 rounded bg-green-700 px-6 py-2 text-sm font-semibold text-white hover:bg-green-800"
+        >
+          Adicionar
+        </button>
+      </section>
 
-          <form onSubmit={onAdd} className="mt-4 grid gap-3 md:grid-cols-5">
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium text-gray-700">Nome</label>
-              <input
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                placeholder="Ex: Sal mineral 25kg"
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
+      {/* MOVIMENTAÇÃO */}
+      <section className="mt-6 rounded-lg bg-white p-4 shadow">
+        <h2 className="text-lg font-semibold text-gray-900">Movimentação</h2>
 
-            <div>
-              <label className="text-sm font-medium text-gray-700">Unidade</label>
-              <select
-                value={unidade}
-                onChange={(e) => setUnidade(e.target.value)}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-              >
-                <option value="un">un</option>
-                <option value="kg">kg</option>
-                <option value="sc">sc</option>
-                <option value="L">L</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700">Saldo</label>
-              <input
-                value={saldo}
-                onChange={(e) => setSaldo(e.target.value)}
-                inputMode="decimal"
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700">Mínimo</label>
-              <input
-                value={minimo}
-                onChange={(e) => setMinimo(e.target.value)}
-                inputMode="decimal"
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div className="md:col-span-5">
-              <button
-                type="submit"
-                className="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-              >
-                Salvar item
-              </button>
-              <button
-                type="button"
-                onClick={refresh}
-                className="ml-2 rounded border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-100"
-              >
-                Atualizar lista
-              </button>
-            </div>
-          </form>
-        </div>
-
-        {/* lista */}
-        <div className="mt-6 rounded-lg bg-white p-4 shadow">
-          <h2 className="text-lg font-semibold">Itens</h2>
-
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="py-2">Item</th>
-                  <th className="py-2">Un</th>
-                  <th className="py-2">Saldo</th>
-                  <th className="py-2">Mínimo</th>
-                  <th className="py-2">Status</th>
-                  <th className="py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtrados.length === 0 && (
-                  <tr>
-                    <td className="py-4 text-gray-600" colSpan={6}>
-                      Nenhum item encontrado.
-                    </td>
-                  </tr>
-                )}
-
-                {filtrados.map((i) => {
-                  const emAlerta = i.saldo <= i.minimo;
-                  const editando = editId === i.id;
-
-                  return (
-                    <tr key={i.id} className="border-b align-middle">
-                      <td className="py-3 font-medium">{i.nome}</td>
-                      <td className="py-3 text-gray-700">{i.unidade}</td>
-
-                      <td className="py-3">
-                        {editando ? (
-                          <input
-                            value={editSaldo}
-                            onChange={(e) => setEditSaldo(e.target.value)}
-                            className="w-28 rounded border border-gray-300 px-2 py-1"
-                          />
-                        ) : (
-                          i.saldo
-                        )}
-                      </td>
-
-                      <td className="py-3">
-                        {editando ? (
-                          <input
-                            value={editMinimo}
-                            onChange={(e) => setEditMinimo(e.target.value)}
-                            className="w-28 rounded border border-gray-300 px-2 py-1"
-                          />
-                        ) : (
-                          i.minimo
-                        )}
-                      </td>
-
-                      <td className="py-3">
-                        {emAlerta ? (
-                          <span className="rounded bg-red-100 px-2 py-1 text-xs font-medium text-red-700">
-                            Em alerta
-                          </span>
-                        ) : (
-                          <span className="rounded bg-green-100 px-2 py-1 text-xs font-medium text-green-700">
-                            OK
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="py-3 text-right">
-                        {editando ? (
-                          <>
-                            <button
-                              onClick={saveEdit}
-                              className="rounded bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700"
-                            >
-                              Salvar
-                            </button>
-                            <button
-                              onClick={() => setEditId(null)}
-                              className="ml-2 rounded border border-gray-300 bg-white px-3 py-1 text-xs hover:bg-gray-100"
-                            >
-                              Cancelar
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => startEdit(i)}
-                              className="rounded border border-gray-300 bg-white px-3 py-1 text-xs hover:bg-gray-100"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (confirm("Excluir este item?")) {
-                                  deleteEstoqueItem(i.id);
-                                  refresh();
-                                }
-                              }}
-                              className="ml-2 rounded border border-red-300 bg-white px-3 py-1 text-xs text-red-700 hover:bg-red-50"
-                            >
-                              Excluir
-                            </button>
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        <div className="mt-4 grid gap-3 md:grid-cols-4">
+          <div>
+            <label className="text-sm text-gray-700">Item</label>
+            <select
+              value={movItemId}
+              onChange={(e) => setMovItemId(e.target.value)}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="">Selecione...</option>
+              {itensOrdenados.map((it) => (
+                <option key={it.id} value={it.id}>
+                  {it.nome}
+                </option>
+              ))}
+            </select>
           </div>
 
-          <p className="mt-3 text-xs text-gray-500">
-            * Dados salvos no navegador (localStorage). Depois a gente troca por banco real.
-          </p>
+          <div>
+            <label className="text-sm text-gray-700">Tipo</label>
+            <select
+              value={movTipo}
+              onChange={(e) => setMovTipo(e.target.value as any)}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="ENTRADA">Entrada</option>
+              <option value="SAIDA">Saída</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-700">Quantidade</label>
+            <input
+              type="number"
+              value={movQtd}
+              onChange={(e) => setMovQtd(Number(e.target.value))}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-700">Obs.</label>
+            <input
+              value={movObs}
+              onChange={(e) => setMovObs(e.target.value)}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              placeholder="Opcional"
+            />
+          </div>
         </div>
-      </div>
+
+        <button
+          onClick={onMovimentar}
+          className="mt-4 rounded bg-green-700 px-6 py-2 text-sm font-semibold text-white hover:bg-green-800"
+        >
+          Salvar movimentação
+        </button>
+      </section>
+
+      {/* ITENS */}
+      <section className="mt-6 rounded-lg bg-white p-4 shadow">
+        <h2 className="text-lg font-semibold text-gray-900">Itens cadastrados</h2>
+
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b">
+                <th className="py-2 text-left text-gray-700">Nome</th>
+                <th className="py-2 text-left text-gray-700">Saldo</th>
+                <th className="py-2 text-left text-gray-700">Mínimo</th>
+                <th className="py-2 text-left text-gray-700">Alerta</th>
+                <th className="py-2 text-left text-gray-700">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {itensOrdenados.map((it) => (
+                <tr key={it.id} className="border-b">
+                  <td className="py-2 text-gray-900">{it.nome}</td>
+                  <td className="py-2 text-gray-900">{it.saldo}</td>
+                  <td className="py-2 text-gray-900">{it.minimo}</td>
+                  <td className="py-2">
+                    <span className={`rounded px-2 py-1 text-xs ${alertaClasse(it)}`}>
+                      {alertaTexto(it)}
+                    </span>
+                  </td>
+                  <td className="py-2">
+                    <button
+                      onClick={() => onExcluir(it.id)}
+                      className="rounded border border-gray-300 bg-white px-3 py-1 text-xs text-gray-800 hover:bg-gray-100"
+                    >
+                      Excluir
+                    </button>
+                  </td>
+                </tr>
+              ))}
+
+              {itensOrdenados.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-4 text-gray-600">
+                    Nenhum item cadastrado ainda.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* MOVIMENTAÇÕES */}
+      <section className="mt-6 rounded-lg bg-white p-4 shadow">
+        <h2 className="text-lg font-semibold text-gray-900">Últimas movimentações</h2>
+
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b">
+                <th className="py-2 text-left text-gray-700">Data</th>
+                <th className="py-2 text-left text-gray-700">Item</th>
+                <th className="py-2 text-left text-gray-700">Tipo</th>
+                <th className="py-2 text-left text-gray-700">Qtd</th>
+                <th className="py-2 text-left text-gray-700">Obs</th>
+              </tr>
+            </thead>
+            <tbody>
+              {movs.slice(0, 20).map((m) => (
+                <tr key={m.id} className="border-b">
+                  <td className="py-2 text-gray-900">{fmtData(m.data)}</td>
+                  <td className="py-2 text-gray-900">{m.itemNome}</td>
+                  <td className="py-2 text-gray-900">{m.tipo}</td>
+                  <td className="py-2 text-gray-900">{m.quantidade}</td>
+                  <td className="py-2 text-gray-900">{m.observacao || "-"}</td>
+                </tr>
+              ))}
+
+              {movs.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-4 text-gray-600">
+                    Nenhuma movimentação registrada.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </main>
   );
 }
