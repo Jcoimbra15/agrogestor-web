@@ -2,46 +2,35 @@ import Link from "next/link";
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
-      <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow">
-        <h1 className="text-2xl font-bold text-gray-900">Entrar</h1>
+    <main className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg">
+        <h1 className="text-2xl font-bold">
+          <span className="text-emerald-400">Agro</span>Gestor
+        </h1>
+        <p className="mt-1 text-sm text-slate-400">Gestão Rural Inteligente</p>
 
-        <p className="mt-2 text-sm text-gray-600">
-          Acesse o AgroGestor com seu e-mail e senha.
-        </p>
+        <div className="mt-6 space-y-3">
+          <label className="block text-sm text-slate-300">Usuário</label>
+          <input className="w-full rounded-lg border px-3 py-2" placeholder="Ex: admin" />
 
-        <form className="mt-6 space-y-4">
-          <div>
-            <label className="text-sm font-medium text-gray-700">E-mail</label>
-            <input
-              type="email"
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-              placeholder="seuemail@empresa.com"
-            />
-          </div>
+          <label className="block text-sm text-slate-300">Senha</label>
+          <input
+            className="w-full rounded-lg border px-3 py-2"
+            placeholder="••••••••"
+            type="password"
+          />
 
-          <div>
-            <label className="text-sm font-medium text-gray-700">Senha</label>
-            <input
-              type="password"
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-              placeholder="••••••••"
-            />
-          </div>
-
-          <button
-            type="button"
-            className="w-full rounded bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700"
+          <Link
+            href="/dashboard"
+            className="mt-2 inline-flex w-full items-center justify-center rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-slate-950 hover:bg-emerald-400"
           >
             Entrar
-          </button>
-        </form>
-
-        <div className="mt-4 text-center">
-          <Link href="/" className="text-sm text-gray-600 hover:underline">
-            Voltar para a página inicial
           </Link>
         </div>
+
+        <p className="mt-4 text-xs text-slate-500">
+          (Login simulado — navega direto para o sistema.)
+        </p>
       </div>
     </main>
   );

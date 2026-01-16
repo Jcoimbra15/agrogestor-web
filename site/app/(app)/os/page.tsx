@@ -1,100 +1,139 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  loadDB,
-  addOS,
-  addMaterialOS,
-  updateOSStatus,
-} from "../lib/agroStore";
+import { useEffect, useMemo, useState } from "react";
+import { addOS, loadDB, OS, updateOS } from "../lib/agroStore";
 
 export default function OSPage() {
-  const [db, setDB] = useState(loadDB());
-  const [titulo, setTitulo] = useState("");
-  const [resp, setResp] = useState("");
+  const [db, setDb] = useState(() => loadDB());
 
   function refresh() {
-    setDB(loadDB());
+    setDb(loadDB());
   }
 
   useEffect(() => {
     refresh();
   }, []);
 
+  const [titulo, setTitulo] = useState("");
+  const [responsavel, setResponsavel] = useState("");
+
+  const osList = useMemo(() => db.os ?? [], [db.os]);
+
+  function onCreate() {
+    if (!titulo.trim() || !responsavel.trim()) return;
+    addOS(titulo, responsavel);
+    setTitulo("");
+    setResponsavel("");
+    refresh();
+  }
+
+  function setStatus(os: OS, status: OS["status"]) {
+    updateOS(os.id, { status });
+    refresh();
+  }
+
   return (
-    <main className="p-6 bg-gray-50 min-h-screen">
-      <div className="flex justify-between">
-        <h1 className="text-3xl font-bold">Ordens de Serviço</h1>
-        <Link href="/dashboard" className="border px-3 py-2 rounded">
-          Voltar
-        </Link>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight">Ordens de Serviço</h1>
+          <p className="text-sm text-slate-300">
+            Crie OS simples e controle status (salvo no navegador).
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={refresh}
+            className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold hover:bg-slate-800"
+          >
+            Atualizar
+          </button>
+          <Link
+            href="/dashboard"
+            className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold hover:bg-slate-800"
+          >
+            Voltar
+          </Link>
+        </div>
       </div>
 
-      {/* Criar OS */}
-      <section className="mt-6 bg-white p-4 rounded shadow">
-        <h2 className="font-semibold">Nova OS</h2>
-        <input
-          placeholder="Título"
-          value={titulo}
-          onChange={(e) => setTitulo(e.target.value)}
-          className="border p-2 mt-2 w-full"
-        />
-        <input
-          placeholder="Responsável"
-          value={resp}
-          onChange={(e) => setResp(e.target.value)}
-          className="border p-2 mt-2 w-full"
-        />
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/30 p-5 shadow">
+        <h2 className="text-lg font-bold">Nova OS</h2>
+
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div>
+            <label className="text-xs text-slate-400">Título</label>
+            <input
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              className="mt-1 w-full rounded-lg border px-3 py-2"
+              placeholder="Ex: Arrumar cerca do pasto 3"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-slate-400">Responsável</label>
+            <input
+              value={responsavel}
+              onChange={(e) => setResponsavel(e.target.value)}
+              className="mt-1 w-full rounded-lg border px-3 py-2"
+              placeholder="Ex: Biru"
+            />
+          </div>
+        </div>
+
         <button
-          onClick={() => {
-            addOS(titulo, resp);
-            setTitulo("");
-            setResp("");
-            refresh();
-          }}
-          className="mt-3 bg-green-600 text-white px-4 py-2 rounded"
+          onClick={onCreate}
+          className="mt-4 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
         >
           Criar OS
         </button>
       </section>
 
-      {/* Lista OS */}
-      <section className="mt-6 bg-white p-4 rounded shadow">
-        <h2 className="font-semibold mb-3">OS Cadastradas</h2>
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/30 p-5 shadow">
+        <h2 className="text-lg font-bold">OS cadastradas</h2>
 
-        {db.os.map((os) => (
-          <div key={os.id} className="border-b py-3">
-            <p className="font-semibold">
-              {os.titulo} — {os.status}
-            </p>
-            <p className="text-sm text-gray-600">
-              Responsável: {os.responsavel}
-            </p>
+        {osList.length === 0 ? (
+          <p className="mt-3 text-sm text-slate-400">Nenhuma OS cadastrada.</p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {osList.map((o) => (
+              <div key={o.id} className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <div className="text-lg font-bold">{o.titulo}</div>
+                    <div className="text-sm text-slate-400">Responsável: {o.responsavel}</div>
+                    <div className="text-xs text-slate-500">Status: {o.status}</div>
+                  </div>
 
-            <div className="flex gap-2 mt-2">
-              <button
-                onClick={() => {
-                  updateOSStatus(os.id, "EM_ANDAMENTO");
-                  refresh();
-                }}
-                className="border px-2 py-1"
-              >
-                Em andamento
-              </button>
-              <button
-                onClick={() => {
-                  updateOSStatus(os.id, "FINALIZADA");
-                  refresh();
-                }}
-                className="border px-2 py-1"
-              >
-                Finalizar
-              </button>
-            </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setStatus(o, "Em andamento")}
+                      className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm hover:bg-slate-800"
+                    >
+                      Em andamento
+                    </button>
+                    <button
+                      onClick={() => setStatus(o, "Finalizada")}
+                      className="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
+                    >
+                      Finalizar
+                    </button>
+                    <button
+                      onClick={() => setStatus(o, "Aberta")}
+                      className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm hover:bg-slate-800"
+                    >
+                      Reabrir
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </section>
-    </main>
+    </div>
   );
 }

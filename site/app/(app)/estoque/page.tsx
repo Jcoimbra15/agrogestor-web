@@ -2,124 +2,251 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { loadDB, EstoqueItem, Movimentacao, OS } from "../lib/agroStore";
+import {
+  addEstoqueItem,
+  addMovimentacao,
+  deleteEstoqueItem,
+  EstoqueItem,
+  loadDB,
+  MovTipo,
+} from "../lib/agroStore";
 
-function isToday(iso?: string) {
-  if (!iso) return false;
-  const d = new Date(iso);
-  const now = new Date();
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-  );
+function badgeStatus(it: EstoqueItem) {
+  const ok = (it.saldo ?? 0) > (it.minimo ?? 0);
+  return ok
+    ? "inline-flex rounded-full bg-emerald-500/15 px-2 py-1 text-xs text-emerald-300 border border-emerald-500/30"
+    : "inline-flex rounded-full bg-red-500/15 px-2 py-1 text-xs text-red-300 border border-red-500/30";
 }
 
-export default function DashboardPage() {
-  const [estoque, setEstoque] = useState<EstoqueItem[]>([]);
-  const [movs, setMovs] = useState<Movimentacao[]>([]);
-  const [osList, setOsList] = useState<OS[]>([]);
-  const [refreshKey, setRefreshKey] = useState(0);
+export default function EstoquePage() {
+  const [nome, setNome] = useState("");
+  const [saldo, setSaldo] = useState<number>(0);
+  const [minimo, setMinimo] = useState<number>(0);
 
-  function reload() {
-    const db = loadDB();
-    setEstoque(db?.estoque ?? []);
-    setMovs(db?.movs ?? []);
-    setOsList(db?.os ?? []);
+  const [itemId, setItemId] = useState<string>("");
+  const [tipo, setTipo] = useState<MovTipo>("Entrada");
+  const [qtd, setQtd] = useState<number>(0);
+  const [obs, setObs] = useState("");
+
+  const [db, setDb] = useState(() => loadDB());
+
+  function refresh() {
+    setDb(loadDB());
   }
 
   useEffect(() => {
-    reload();
+    refresh();
   }, []);
 
-  useEffect(() => {
-    reload();
-  }, [refreshKey]);
+  const items = db.estoque ?? [];
 
-  const estoqueCount = estoque.length;
+  const itensOrdenados = useMemo(() => {
+    return [...items].sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [items]);
 
-  const alertasCount = useMemo(() => {
-    return estoque.filter(
-      (i) => (i.saldo ?? 0) <= (i.minimo ?? 0)
-    ).length;
-  }, [estoque]);
+  function onAddItem() {
+    if (!nome.trim()) return;
+    addEstoqueItem(nome, saldo, minimo);
+    setNome("");
+    setSaldo(0);
+    setMinimo(0);
+    refresh();
+  }
 
-  const osHojeCount = useMemo(() => {
-    return osList.filter((o) => isToday(o.data)).length;
-  }, [osList]);
+  function onAddMov() {
+    if (!itemId) return;
+    addMovimentacao(itemId, tipo, qtd, obs);
+    setQtd(0);
+    setObs("");
+    refresh();
+  }
 
-  const ultimaMov = useMemo(() => {
-    if (!movs || movs.length === 0) return null;
-    return [...movs].sort(
-      (a, b) =>
-        new Date(b.data).getTime() - new Date(a.data).getTime()
-    )[0];
-  }, [movs]);
+  function onDelete(id: string) {
+    deleteEstoqueItem(id);
+    refresh();
+  }
 
   return (
-    <main className="min-h-screen bg-gray-50 p-6">
-      <div className="flex items-start justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Indicadores gerais do sistema
+          <h1 className="text-3xl font-extrabold tracking-tight">Estoque</h1>
+          <p className="text-sm text-slate-300">
+            Cadastre produtos/insumos e registre entradas/saídas.
           </p>
         </div>
 
-        <button
-          onClick={() => setRefreshKey((v) => v + 1)}
-          className="rounded border bg-white px-4 py-2 text-sm hover:bg-gray-100"
-        >
-          Atualizar
-        </button>
-      </div>
-
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <div className="rounded bg-white p-4 shadow">
-          <p className="text-sm text-gray-600">Ordens de Serviço</p>
-          <p className="text-2xl font-bold">{osHojeCount}</p>
-          <p className="text-sm text-gray-500">Abertas hoje</p>
-        </div>
-
-        <div className="rounded bg-white p-4 shadow">
-          <p className="text-sm text-gray-600">Estoque</p>
-          <p className="text-2xl font-bold">{estoqueCount}</p>
-          <p className="text-sm text-gray-500">Itens cadastrados</p>
-        </div>
-
-        <div className="rounded bg-white p-4 shadow">
-          <p className="text-sm text-gray-600">Alertas</p>
-          <p className="text-2xl font-bold">{alertasCount}</p>
-          <p className="text-sm text-gray-500">Estoque baixo</p>
+        <div className="flex gap-2">
+          <button
+            onClick={refresh}
+            className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold hover:bg-slate-800"
+          >
+            Atualizar
+          </button>
+          <Link
+            href="/dashboard"
+            className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold hover:bg-slate-800"
+          >
+            Voltar
+          </Link>
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <div className="rounded bg-white p-4 shadow">
-          <h2 className="font-semibold">Ações rápidas</h2>
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/30 p-5 shadow">
+        <h2 className="text-lg font-bold">Cadastrar item</h2>
 
-          <div className="mt-4 flex gap-2">
-            <Link href="/os" className="rounded bg-green-600 px-4 py-2 text-white">
-              Nova OS
-            </Link>
-            <Link href="/estoque" className="rounded border px-4 py-2">
-              Estoque
-            </Link>
-            <Link href="/rebanho" className="rounded border px-4 py-2">
-              Rebanho
-            </Link>
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="md:col-span-1">
+            <label className="text-xs text-slate-400">Nome</label>
+            <input
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              className="mt-1 w-full rounded-lg border px-3 py-2"
+              placeholder="Ex: Sal mineral, Milho, Vacina..."
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-slate-400">Saldo</label>
+            <input
+              value={saldo}
+              onChange={(e) => setSaldo(Number(e.target.value))}
+              className="mt-1 w-full rounded-lg border px-3 py-2"
+              type="number"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-slate-400">Mínimo</label>
+            <input
+              value={minimo}
+              onChange={(e) => setMinimo(Number(e.target.value))}
+              className="mt-1 w-full rounded-lg border px-3 py-2"
+              type="number"
+            />
           </div>
         </div>
 
-        <div className="rounded bg-white p-4 shadow">
-          <h2 className="font-semibold">Última movimentação</h2>
-          <p className="mt-2 text-sm text-gray-700">
-            {ultimaMov
-              ? `${ultimaMov.tipo} - ${ultimaMov.itemNome} (${ultimaMov.quantidade})`
-              : "Nenhuma movimentação ainda."}
-          </p>
+        <button
+          onClick={onAddItem}
+          className="mt-4 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
+        >
+          Adicionar
+        </button>
+      </section>
+
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/30 p-5 shadow">
+        <h2 className="text-lg font-bold">Registrar movimentação</h2>
+
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="md:col-span-1">
+            <label className="text-xs text-slate-400">Item</label>
+            <select
+              value={itemId}
+              onChange={(e) => setItemId(e.target.value)}
+              className="mt-1 w-full rounded-lg border px-3 py-2"
+            >
+              <option value="">Selecione...</option>
+              {itensOrdenados.map((it) => (
+                <option key={it.id} value={it.id}>
+                  {it.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs text-slate-400">Tipo</label>
+            <select
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value as MovTipo)}
+              className="mt-1 w-full rounded-lg border px-3 py-2"
+            >
+              <option value="Entrada">Entrada</option>
+              <option value="Saida">Saída</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs text-slate-400">Quantidade</label>
+            <input
+              value={qtd}
+              onChange={(e) => setQtd(Number(e.target.value))}
+              className="mt-1 w-full rounded-lg border px-3 py-2"
+              type="number"
+            />
+          </div>
         </div>
-      </div>
-    </main>
+
+        <div className="mt-3">
+          <label className="text-xs text-slate-400">Obs (opcional)</label>
+          <input
+            value={obs}
+            onChange={(e) => setObs(e.target.value)}
+            className="mt-1 w-full rounded-lg border px-3 py-2"
+            placeholder="Ex: Entrada por compra / Saída para curral..."
+          />
+        </div>
+
+        <button
+          onClick={onAddMov}
+          className="mt-4 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
+        >
+          Registrar
+        </button>
+      </section>
+
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/30 p-5 shadow">
+        <h2 className="text-lg font-bold">Itens cadastrados</h2>
+
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-slate-300">
+              <tr className="border-b border-slate-800">
+                <th className="py-2 text-left">Nome</th>
+                <th className="py-2 text-left">Saldo</th>
+                <th className="py-2 text-left">Mínimo</th>
+                <th className="py-2 text-left">Alerta</th>
+                <th className="py-2 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {itensOrdenados.map((it) => (
+                <tr key={it.id} className="border-b border-slate-900">
+                  <td className="py-2">{it.nome}</td>
+                  <td className="py-2">{it.saldo}</td>
+                  <td className="py-2">{it.minimo}</td>
+                  <td className="py-2">
+                    <span className={badgeStatus(it)}>
+                      {(it.saldo ?? 0) <= (it.minimo ?? 0) ? "Abaixo do mínimo" : "OK"}
+                    </span>
+                  </td>
+                  <td className="py-2 text-right">
+                    <button
+                      onClick={() => onDelete(it.id)}
+                      className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 hover:bg-slate-800"
+                    >
+                      Excluir
+                    </button>
+                  </td>
+                </tr>
+              ))}
+
+              {itensOrdenados.length === 0 && (
+                <tr>
+                  <td className="py-3 text-slate-400" colSpan={5}>
+                    Nenhum item cadastrado.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="mt-3 text-xs text-slate-400">
+          Dica: se você atualizar a página, os dados continuam salvos (localStorage).
+        </p>
+      </section>
+    </div>
   );
 }
