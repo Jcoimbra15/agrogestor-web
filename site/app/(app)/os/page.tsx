@@ -1,48 +1,100 @@
-// site/app/(app)/os/page.tsx
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
-import { loadDB, OS } from "../lib/agroStore";
+import Link from "next/link";
+import {
+  loadDB,
+  addOS,
+  addMaterialOS,
+  updateOSStatus,
+} from "../lib/agroStore";
 
 export default function OSPage() {
-  const [list, setList] = useState<OS[]>([]);
+  const [db, setDB] = useState(loadDB());
+  const [titulo, setTitulo] = useState("");
+  const [resp, setResp] = useState("");
+
+  function refresh() {
+    setDB(loadDB());
+  }
 
   useEffect(() => {
-    const db = loadDB();
-    setList(db.os ?? []);
+    refresh();
   }, []);
 
   return (
-    <main className="min-h-screen bg-gray-50 p-6 text-gray-900">
-      <h1 className="text-3xl font-bold">Ordens de Serviço</h1>
-      <p className="mt-2 text-sm text-gray-600">
-        Aqui vamos criar OS com fotos, status, responsável e materiais usados.
-      </p>
-
-      <div className="mt-6 rounded-lg bg-white p-4 shadow">
-        {list.length === 0 ? (
-          <p className="text-sm text-gray-500">Nenhuma OS cadastrada.</p>
-        ) : (
-          <ul className="space-y-3">
-            {list.map((o) => (
-              <li key={o.id} className="rounded border p-3">
-                <div className="flex items-center justify-between">
-                  <p className="font-semibold">{o.titulo}</p>
-                  <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700">
-                    {o.status}
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-gray-600">Responsável: {o.responsavel}</p>
-              </li>
-            ))}
-          </ul>
-        )}
+    <main className="p-6 bg-gray-50 min-h-screen">
+      <div className="flex justify-between">
+        <h1 className="text-3xl font-bold">Ordens de Serviço</h1>
+        <Link href="/dashboard" className="border px-3 py-2 rounded">
+          Voltar
+        </Link>
       </div>
 
-      <Link href="/dashboard" className="mt-4 inline-block text-sm text-gray-700 hover:underline">
-        ← Voltar para o Dashboard
-      </Link>
+      {/* Criar OS */}
+      <section className="mt-6 bg-white p-4 rounded shadow">
+        <h2 className="font-semibold">Nova OS</h2>
+        <input
+          placeholder="Título"
+          value={titulo}
+          onChange={(e) => setTitulo(e.target.value)}
+          className="border p-2 mt-2 w-full"
+        />
+        <input
+          placeholder="Responsável"
+          value={resp}
+          onChange={(e) => setResp(e.target.value)}
+          className="border p-2 mt-2 w-full"
+        />
+        <button
+          onClick={() => {
+            addOS(titulo, resp);
+            setTitulo("");
+            setResp("");
+            refresh();
+          }}
+          className="mt-3 bg-green-600 text-white px-4 py-2 rounded"
+        >
+          Criar OS
+        </button>
+      </section>
+
+      {/* Lista OS */}
+      <section className="mt-6 bg-white p-4 rounded shadow">
+        <h2 className="font-semibold mb-3">OS Cadastradas</h2>
+
+        {db.os.map((os) => (
+          <div key={os.id} className="border-b py-3">
+            <p className="font-semibold">
+              {os.titulo} — {os.status}
+            </p>
+            <p className="text-sm text-gray-600">
+              Responsável: {os.responsavel}
+            </p>
+
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={() => {
+                  updateOSStatus(os.id, "EM_ANDAMENTO");
+                  refresh();
+                }}
+                className="border px-2 py-1"
+              >
+                Em andamento
+              </button>
+              <button
+                onClick={() => {
+                  updateOSStatus(os.id, "FINALIZADA");
+                  refresh();
+                }}
+                className="border px-2 py-1"
+              >
+                Finalizar
+              </button>
+            </div>
+          </div>
+        ))}
+      </section>
     </main>
   );
 }

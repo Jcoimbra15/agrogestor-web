@@ -1,146 +1,130 @@
-// site/app/(app)/dashboard/page.tsx
 "use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { EstoqueItem, Movimentacao, OS, loadDB } from "../lib/agroStore";
+import { loadDB, Movimentacao } from "../lib/agroStore";
 
-function isToday(iso: string) {
+function fmtBR(iso?: string) {
+  if (!iso) return "-";
   try {
-    const d = new Date(iso);
-    const n = new Date();
-    return (
-      d.getFullYear() === n.getFullYear() &&
-      d.getMonth() === n.getMonth() &&
-      d.getDate() === n.getDate()
-    );
+    return new Date(iso).toLocaleString("pt-BR");
   } catch {
-    return false;
+    return iso;
   }
 }
 
 export default function DashboardPage() {
-  const [estoque, setEstoque] = useState<EstoqueItem[]>([]);
   const [movs, setMovs] = useState<Movimentacao[]>([]);
-  const [os, setOs] = useState<OS[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<string>("");
 
-  // ✅ Recarrega tudo (botão Atualizar usa isso)
-  function carregar() {
+  function refresh() {
     const db = loadDB();
-    setEstoque(db.estoque);
-    setMovs(db.movimentacoes);
-    setOs(db.os);
+    setMovs(db.movs ?? []);
+    setLastUpdated(db.lastUpdated ?? "");
   }
 
   useEffect(() => {
-    carregar();
+    refresh();
   }, []);
 
-  const estoqueCount = useMemo(() => estoque.length, [estoque]);
+  const dbMemo = useMemo(() => loadDB(), [lastUpdated]); // só pra calcular cards quando atualiza
 
-  const alertasCount = useMemo(() => {
-    return estoque.filter((i) => (i.saldo ?? 0) <= (i.minimo ?? 0)).length;
-  }, [estoque]);
+  const estoqueCount = dbMemo.estoque.length;
+  const alertasCount = dbMemo.estoque.filter((it) => (it.saldo ?? 0) <= (it.minimo ?? 0)).length;
+  const osCount = dbMemo.os.filter((o) => o.status !== "FINALIZADA").length;
+  const rebanhoCount = dbMemo.pesagens.length;
 
-  const osHojeCount = useMemo(() => {
-    return os.filter((o) => isToday(o.data)).length;
-  }, [os]);
+  const ultimaMov = movs.length > 0 ? movs[0] : null;
 
   return (
-    <main className="min-h-screen bg-gray-50 p-6">
+    <div className="max-w-6xl mx-auto">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Bem-vindo ao AgroGestor. Aqui vamos mostrar os indicadores principais.
-          </p>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-slate-300 mt-1">Visão geral do AgroGestor (dados reais do sistema).</p>
+          <p className="text-xs text-slate-400 mt-1">Última atualização: {fmtBR(lastUpdated)}</p>
         </div>
 
-        <div className="flex gap-2">
-          {/* ✅ ATUALIZAR DE VERDADE */}
-          <button
-            onClick={() => carregar()}
-            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm text-gray-800 hover:bg-gray-100"
-          >
-            Atualizar
-          </button>
-
-          <Link
-            href="/"
-            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm text-gray-800 hover:bg-gray-100"
-          >
-            Sair
-          </Link>
-        </div>
+        <button
+          onClick={refresh}
+          className="rounded-md border border-slate-700 bg-slate-900 px-4 py-2 text-sm hover:bg-slate-800"
+        >
+          Atualizar
+        </button>
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <div className="rounded-lg bg-white p-4 shadow">
-          <p className="text-sm text-gray-600">Ordens de Serviço</p>
-          <p className="mt-2 text-2xl font-bold text-gray-900">{osHojeCount}</p>
-          <p className="mt-1 text-sm text-gray-500">Abertas hoje</p>
+      {/* Cards */}
+      <div className="mt-6 grid gap-4 md:grid-cols-4">
+        <div className="rounded-xl border border-slate-700 bg-slate-900 p-4">
+          <div className="text-sm text-slate-300">Estoque</div>
+          <div className="text-3xl font-bold">{estoqueCount}</div>
+          <div className="text-xs text-slate-400">Itens cadastrados</div>
         </div>
 
-        <div className="rounded-lg bg-white p-4 shadow">
-          <p className="text-sm text-gray-600">Estoque</p>
-          <p className="mt-2 text-2xl font-bold text-gray-900">{estoqueCount}</p>
-          <p className="mt-1 text-sm text-gray-500">Itens cadastrados</p>
+        <div className="rounded-xl border border-slate-700 bg-slate-900 p-4">
+          <div className="text-sm text-slate-300">Alertas</div>
+          <div className="text-3xl font-bold">{alertasCount}</div>
+          <div className="text-xs text-slate-400">Abaixo do mínimo</div>
         </div>
 
-        <div className="rounded-lg bg-white p-4 shadow">
-          <p className="text-sm text-gray-600">Alertas</p>
-          <p className="mt-2 text-2xl font-bold text-gray-900">{alertasCount}</p>
-          <p className="mt-1 text-sm text-gray-500">Pendências</p>
+        <div className="rounded-xl border border-slate-700 bg-slate-900 p-4">
+          <div className="text-sm text-slate-300">Ordens de Serviço</div>
+          <div className="text-3xl font-bold">{osCount}</div>
+          <div className="text-xs text-slate-400">Abertas / em andamento</div>
+        </div>
+
+        <div className="rounded-xl border border-slate-700 bg-slate-900 p-4">
+          <div className="text-sm text-slate-300">Rebanho</div>
+          <div className="text-3xl font-bold">{rebanhoCount}</div>
+          <div className="text-xs text-slate-400">Pesagens registradas</div>
         </div>
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <div className="rounded-lg bg-white p-4 shadow">
-          <h2 className="text-lg font-semibold text-gray-900">Ações rápidas</h2>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Link
-              href="/os"
-              className="rounded bg-green-700 px-4 py-2 text-sm text-white hover:bg-green-800"
-            >
-              Nova OS
+        {/* Ações rápidas */}
+        <div className="rounded-xl border border-slate-700 bg-slate-900 p-4">
+          <h2 className="text-lg font-semibold">Ações rápidas</h2>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold hover:bg-emerald-700" href="/estoque">
+              Estoque
             </Link>
-
-            <Link
-              href="/estoque"
-              className="rounded border border-gray-300 bg-white px-4 py-2 text-sm text-gray-800 hover:bg-gray-100"
-            >
-              Ver estoque
+            <Link className="rounded-md border border-slate-700 bg-slate-950 px-4 py-2 text-sm hover:bg-slate-800" href="/os">
+              OS
             </Link>
-
-            <Link
-              href="/rebanho"
-              className="rounded border border-gray-300 bg-white px-4 py-2 text-sm text-gray-800 hover:bg-gray-100"
-            >
-              Ver rebanho
+            <Link className="rounded-md border border-slate-700 bg-slate-950 px-4 py-2 text-sm hover:bg-slate-800" href="/rebanho">
+              Rebanho
             </Link>
           </div>
-
-          <p className="mt-3 text-xs text-gray-500">
-            (Essas telas a gente cria em seguida.)
+          <p className="mt-3 text-xs text-slate-400">
+            Dica: se você atualizar qualquer tela e voltar aqui, clique em “Atualizar”.
           </p>
         </div>
 
-        <div className="rounded-lg bg-white p-4 shadow">
-          <h2 className="text-lg font-semibold text-gray-900">Resumo</h2>
-          <p className="mt-2 text-sm text-gray-700">
-            Aqui vamos colocar gráficos, movimentações e alertas de estoque mínimo.
-          </p>
-
-          <div className="mt-4">
-            <p className="text-sm font-semibold text-gray-900">Última movimentação</p>
-            <p className="mt-1 text-sm text-gray-700">
-              {movs[0]
-                ? `${movs[0].tipo} - ${movs[0].itemNome} (${movs[0].quantidade})`
-                : "Nenhuma movimentação ainda."}
-            </p>
+        {/* Última movimentação */}
+        <div className="rounded-xl border border-slate-700 bg-slate-900 p-4">
+          <h2 className="text-lg font-semibold">Última movimentação</h2>
+          <div className="mt-3 text-sm text-slate-200">
+            {ultimaMov ? (
+              <div className="space-y-1">
+                <div>
+                  <span className="text-slate-400">Tipo:</span> {ultimaMov.tipo}
+                </div>
+                <div>
+                  <span className="text-slate-400">Item:</span> {ultimaMov.itemNome}
+                </div>
+                <div>
+                  <span className="text-slate-400">Qtd:</span> {ultimaMov.quantidade}
+                </div>
+                <div>
+                  <span className="text-slate-400">Data:</span> {fmtBR(ultimaMov.data)}
+                </div>
+              </div>
+            ) : (
+              "Nenhuma movimentação ainda."
+            )}
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

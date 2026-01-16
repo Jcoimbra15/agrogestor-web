@@ -1,153 +1,232 @@
-// site/app/(app)/lib/agroStore.ts
+export type MovTipo = "ENTRADA" | "SAIDA";
+
 export type EstoqueItem = {
   id: string;
   nome: string;
   saldo: number;
   minimo: number;
-  criadoEm: string; // ISO
-  atualizadoEm: string; // ISO
+  atualizadoEm: string;
 };
 
 export type Movimentacao = {
   id: string;
+  data: string;
+  tipo: MovTipo;
   itemId: string;
   itemNome: string;
-  tipo: "ENTRADA" | "SAIDA";
   quantidade: number;
-  observacao?: string;
-  data: string; // ISO
+  obs?: string;
 };
+
+export type Animal = {
+  id: string;
+  brinco: string;
+  sexo: "Macho" | "Fêmea";
+  categoria: string;
+  lote?: string;
+  nascimento?: string;
+  criadoEm: string;
+};
+
+export type Pesagem = {
+  id: string;
+  animalId: string;
+  brinco: string;
+  peso: number;
+  data: string;
+  obs?: string;
+};
+
+export type OSStatus = "ABERTA" | "EM_ANDAMENTO" | "FINALIZADA";
 
 export type OS = {
   id: string;
   titulo: string;
-  status: "ABERTA" | "EM_ANDAMENTO" | "CONCLUIDA";
-  data: string; // ISO
+  responsavel: string;
+  status: OSStatus;
+  criadoEm: string;
 };
 
-type AgroDB = {
+export type DB = {
+  lastUpdated: string;
   estoque: EstoqueItem[];
-  movimentacoes: Movimentacao[];
+  movs: Movimentacao[];
+  animais: Animal[];
+  pesagens: Pesagem[];
   os: OS[];
 };
 
-const KEY = "agrogestor_db_v1";
+const KEY = "AGRO_DB_V1";
 
-function safeParse<T>(text: string, fallback: T): T {
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    return fallback;
-  }
+function nowISO() {
+  return new Date().toISOString();
+}
+function uid() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-export function loadDB(): AgroDB {
+export function loadDB(): DB {
   if (typeof window === "undefined") {
-    return { estoque: [], movimentacoes: [], os: [] };
-  }
-
-  const raw = window.localStorage.getItem(KEY);
-  if (!raw) {
-    const inicial: AgroDB = { estoque: [], movimentacoes: [], os: [] };
-    window.localStorage.setItem(KEY, JSON.stringify(inicial));
-    return inicial;
-  }
-
-  const parsed = safeParse<AgroDB>(raw, { estoque: [], movimentacoes: [], os: [] });
-
-  // Garantir shape
-  return {
-    estoque: Array.isArray(parsed.estoque) ? parsed.estoque : [],
-    movimentacoes: Array.isArray(parsed.movimentacoes) ? parsed.movimentacoes : [],
-    os: Array.isArray(parsed.os) ? parsed.os : [],
-  };
-}
-
-export function saveDB(db: AgroDB) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(KEY, JSON.stringify(db));
-}
-
-export function uid(prefix = "id") {
-  return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now()}`;
-}
-
-export function addEstoqueItem(input: { nome: string; saldo: number; minimo: number }) {
-  const db = loadDB();
-
-  const now = new Date().toISOString();
-  const item: EstoqueItem = {
-    id: uid("est"),
-    nome: input.nome.trim(),
-    saldo: Number.isFinite(input.saldo) ? input.saldo : 0,
-    minimo: Number.isFinite(input.minimo) ? input.minimo : 0,
-    criadoEm: now,
-    atualizadoEm: now,
-  };
-
-  db.estoque.push(item);
-  saveDB(db);
-  return item;
-}
-
-export function updateEstoqueItem(id: string, patch: Partial<Omit<EstoqueItem, "id" | "criadoEm">>) {
-  const db = loadDB();
-  db.estoque = db.estoque.map((it) => {
-    if (it.id !== id) return it;
     return {
-      ...it,
-      ...patch,
-      atualizadoEm: new Date().toISOString(),
+      lastUpdated: nowISO(),
+      estoque: [],
+      movs: [],
+      animais: [],
+      pesagens: [],
+      os: [],
     };
+  }
+
+  const raw = localStorage.getItem(KEY);
+  if (!raw) {
+    const fresh: DB = {
+      lastUpdated: nowISO(),
+      estoque: [],
+      movs: [],
+      animais: [],
+      pesagens: [],
+      os: [],
+    };
+    localStorage.setItem(KEY, JSON.stringify(fresh));
+    return fresh;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<DB>;
+    return {
+      lastUpdated: parsed.lastUpdated ?? nowISO(),
+      estoque: parsed.estoque ?? [],
+      movs: parsed.movs ?? [],
+      animais: parsed.animais ?? [],
+      pesagens: parsed.pesagens ?? [],
+      os: parsed.os ?? [],
+    };
+  } catch {
+    const fresh: DB = {
+      lastUpdated: nowISO(),
+      estoque: [],
+      movs: [],
+      animais: [],
+      pesagens: [],
+      os: [],
+    };
+    localStorage.setItem(KEY, JSON.stringify(fresh));
+    return fresh;
+  }
+}
+
+export function saveDB(db: DB) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(KEY, JSON.stringify(db));
+}
+
+export function touchDB() {
+  const db = loadDB();
+  db.lastUpdated = nowISO();
+  saveDB(db);
+}
+
+/* ========= ESTOQUE ========= */
+export function addEstoqueItem(nome: string, saldo: number, minimo: number) {
+  const db = loadDB();
+  db.estoque.unshift({
+    id: uid(),
+    nome: nome.trim(),
+    saldo: Number(saldo) || 0,
+    minimo: Number(minimo) || 0,
+    atualizadoEm: nowISO(),
   });
+  db.lastUpdated = nowISO();
   saveDB(db);
 }
 
 export function deleteEstoqueItem(id: string) {
   const db = loadDB();
-
-  const item = db.estoque.find((it) => it.id === id);
   db.estoque = db.estoque.filter((it) => it.id !== id);
-
-  // Também remove movimentações do item
-  db.movimentacoes = db.movimentacoes.filter((m) => m.itemId !== id);
-
+  db.lastUpdated = nowISO();
   saveDB(db);
-  return item;
 }
 
-export function addMovimentacao(input: {
-  itemId: string;
-  tipo: "ENTRADA" | "SAIDA";
-  quantidade: number;
-  observacao?: string;
-}) {
+export function addMovimentacao(tipo: MovTipo, itemId: string, quantidade: number, obs?: string) {
   const db = loadDB();
-  const item = db.estoque.find((it) => it.id === input.itemId);
-  if (!item) throw new Error("Item não encontrado");
+  const it = db.estoque.find((x) => x.id === itemId);
+  if (!it) return;
 
-  const qtd = Math.max(0, Number(input.quantidade) || 0);
+  const q = Number(quantidade) || 0;
+  if (q <= 0) return;
 
-  const novoSaldo = input.tipo === "ENTRADA" ? item.saldo + qtd : item.saldo - qtd;
+  if (tipo === "ENTRADA") it.saldo += q;
+  if (tipo === "SAIDA") it.saldo -= q;
 
-  // Atualiza item
-  db.estoque = db.estoque.map((it) =>
-    it.id === item.id
-      ? { ...it, saldo: novoSaldo, atualizadoEm: new Date().toISOString() }
-      : it
-  );
+  it.atualizadoEm = nowISO();
 
-  const mov: Movimentacao = {
-    id: uid("mov"),
-    itemId: item.id,
-    itemNome: item.nome,
-    tipo: input.tipo,
-    quantidade: qtd,
-    observacao: input.observacao?.trim() || "",
-    data: new Date().toISOString(),
-  };
+  db.movs.unshift({
+    id: uid(),
+    data: nowISO(),
+    tipo,
+    itemId,
+    itemNome: it.nome,
+    quantidade: q,
+    obs,
+  });
 
-  db.movimentacoes.unshift(mov);
+  db.lastUpdated = nowISO();
   saveDB(db);
-  return mov;
+}
+
+/* ========= REBANHO ========= */
+export function addAnimal(brinco: string, sexo: "Macho" | "Fêmea", categoria: string, lote?: string, nascimento?: string) {
+  const db = loadDB();
+  db.animais.unshift({
+    id: uid(),
+    brinco: brinco.trim(),
+    sexo,
+    categoria,
+    lote: lote?.trim(),
+    nascimento: nascimento?.trim(),
+    criadoEm: nowISO(),
+  });
+  db.lastUpdated = nowISO();
+  saveDB(db);
+}
+
+export function addPesagem(animalId: string, peso: number, dataISO: string, obs?: string) {
+  const db = loadDB();
+  const a = db.animais.find((x) => x.id === animalId);
+  if (!a) return;
+
+  db.pesagens.unshift({
+    id: uid(),
+    animalId,
+    brinco: a.brinco,
+    peso: Number(peso) || 0,
+    data: dataISO || nowISO(),
+    obs,
+  });
+
+  db.lastUpdated = nowISO();
+  saveDB(db);
+}
+
+/* ========= OS ========= */
+export function addOS(titulo: string, responsavel: string) {
+  const db = loadDB();
+  db.os.unshift({
+    id: uid(),
+    titulo: titulo.trim(),
+    responsavel: responsavel.trim(),
+    status: "ABERTA",
+    criadoEm: nowISO(),
+  });
+  db.lastUpdated = nowISO();
+  saveDB(db);
+}
+
+export function setOSStatus(id: string, status: OSStatus) {
+  const db = loadDB();
+  const o = db.os.find((x) => x.id === id);
+  if (!o) return;
+  o.status = status;
+  db.lastUpdated = nowISO();
+  saveDB(db);
 }
