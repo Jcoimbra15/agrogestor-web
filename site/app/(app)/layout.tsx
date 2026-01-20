@@ -1,21 +1,25 @@
+// site/app/(app)/layout.tsx
+import type { ReactNode } from "react";
 import Sidebar from "./sidebar";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="appShell">
       <Sidebar />
-      <div className="appMain">
+
+      <div className="contentShell">
         <header className="topbar">
-          <div className="topbar__left">Painel</div>
-          <div className="topbar__right">
-            <span className="topbar__user">Olá, Usuário</span>
-            <a className="btn btn--ghost" href="/login">
+          <div className="topbarTitle">Painel</div>
+
+          <div className="topbarRight">
+            <span className="topbarUser">Olá, Usuário</span>
+            <a className="btn btnGhost" href="/login">
               Sair
             </a>
           </div>
         </header>
 
-        <main className="content">{children}</main>
+        <main className="contentMain">{children}</main>
       </div>
     </div>
   );

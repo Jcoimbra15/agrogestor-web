@@ -1,139 +1,125 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { addOS, loadDB, OS, updateOS } from "../lib/agroStore";
+import { useMemo, useState } from "react";
+import {
+  addOS,
+  deleteOS,
+  finalizarOS,
+  iniciarOS,
+  loadDB,
+} from "../lib/agroStore";
 
 export default function OSPage() {
   const [db, setDb] = useState(() => loadDB());
-
-  function refresh() {
-    setDb(loadDB());
-  }
-
-  useEffect(() => {
-    refresh();
-  }, []);
+  const [lastUpdated, setLastUpdated] = useState<string>(() => db?.meta?.lastUpdated ?? "");
 
   const [titulo, setTitulo] = useState("");
   const [responsavel, setResponsavel] = useState("");
 
-  const osList = useMemo(() => db.os ?? [], [db.os]);
+  const osList = useMemo(() => (Array.isArray(db?.os) ? db.os : []), [db]);
 
-  function onCreate() {
-    if (!titulo.trim() || !responsavel.trim()) return;
-    addOS(titulo, responsavel);
-    setTitulo("");
-    setResponsavel("");
-    refresh();
+  function refresh() {
+    const next = loadDB();
+    setDb(next);
+    setLastUpdated(next?.meta?.lastUpdated ?? "");
   }
 
-  function setStatus(os: OS, status: OS["status"]) {
-    updateOS(os.id, { status });
-    refresh();
+  function onAdd() {
+    const next = addOS((titulo ?? "").trim(), (responsavel ?? "").trim());
+    setDb(next);
+    setLastUpdated(next?.meta?.lastUpdated ?? "");
+    setTitulo("");
+    setResponsavel("");
+  }
+
+  function onIniciar(id: string) {
+    const next = iniciarOS(id);
+    setDb(next);
+    setLastUpdated(next?.meta?.lastUpdated ?? "");
+  }
+
+  function onFinalizar(id: string) {
+    const next = finalizarOS(id);
+    setDb(next);
+    setLastUpdated(next?.meta?.lastUpdated ?? "");
+  }
+
+  function onDelete(id: string) {
+    const next = deleteOS(id);
+    setDb(next);
+    setLastUpdated(next?.meta?.lastUpdated ?? "");
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <main className="contentWrap">
+      <div className="pageHeader">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Ordens de Serviço</h1>
-          <p className="text-sm text-slate-300">
-            Crie OS simples e controle status (salvo no navegador).
-          </p>
+          <h1 className="pageTitle">Ordens de Serviço</h1>
+          <p className="pageSubtitle">Crie OS simples e controle status (salvo no navegador).</p>
+          <p className="pageHint">Última atualização: {lastUpdated ? new Date(lastUpdated).toLocaleString() : "-"}</p>
         </div>
 
-        <div className="flex gap-2">
-          <button
-            onClick={refresh}
-            className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold hover:bg-slate-800"
-          >
-            Atualizar
-          </button>
-          <Link
-            href="/dashboard"
-            className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold hover:bg-slate-800"
-          >
-            Voltar
-          </Link>
+        <div className="pageActions">
+          <button className="btnSecondary" onClick={refresh}>Atualizar</button>
+          <Link className="btnSecondary" href="/dashboard">Voltar</Link>
         </div>
       </div>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/30 p-5 shadow">
-        <h2 className="text-lg font-bold">Nova OS</h2>
+      <section className="card">
+        <h2 className="sectionTitle">Nova OS</h2>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div>
-            <label className="text-xs text-slate-400">Título</label>
-            <input
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
-              className="mt-1 w-full rounded-lg border px-3 py-2"
-              placeholder="Ex: Arrumar cerca do pasto 3"
-            />
+        <div className="grid2">
+          <div className="field">
+            <label>Título</label>
+            <input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Arrumar cerca do pasto 3" />
           </div>
 
-          <div>
-            <label className="text-xs text-slate-400">Responsável</label>
-            <input
-              value={responsavel}
-              onChange={(e) => setResponsavel(e.target.value)}
-              className="mt-1 w-full rounded-lg border px-3 py-2"
-              placeholder="Ex: Biru"
-            />
+          <div className="field">
+            <label>Responsável</label>
+            <input value={responsavel} onChange={(e) => setResponsavel(e.target.value)} placeholder="Ex: Biru" />
           </div>
         </div>
 
-        <button
-          onClick={onCreate}
-          className="mt-4 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
-        >
-          Criar OS
-        </button>
+        <div className="rowActions">
+          <button className="btnPrimary" onClick={onAdd} disabled={!titulo.trim() || !responsavel.trim()}>
+            Criar OS
+          </button>
+        </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/30 p-5 shadow">
-        <h2 className="text-lg font-bold">OS cadastradas</h2>
+      <section className="card">
+        <h2 className="sectionTitle">OS cadastradas</h2>
 
         {osList.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-400">Nenhuma OS cadastrada.</p>
+          <p className="muted">Nenhuma OS cadastrada.</p>
         ) : (
-          <div className="mt-4 space-y-3">
+          <div className="list">
             {osList.map((o) => (
-              <div key={o.id} className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <div className="text-lg font-bold">{o.titulo}</div>
-                    <div className="text-sm text-slate-400">Responsável: {o.responsavel}</div>
-                    <div className="text-xs text-slate-500">Status: {o.status}</div>
+              <div className="listItem" key={o.id}>
+                <div>
+                  <div className="listTitle">
+                    {o.titulo} <span className="muted">({o.status})</span>
                   </div>
+                  <div className="muted">Responsável: {o.responsavel}</div>
+                  {o.iniciadoEm ? <div className="muted">Início: {new Date(o.iniciadoEm).toLocaleString()}</div> : null}
+                  {o.finalizadoEm ? <div className="muted">Fim: {new Date(o.finalizadoEm).toLocaleString()}</div> : null}
+                </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => setStatus(o, "Em andamento")}
-                      className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm hover:bg-slate-800"
-                    >
-                      Em andamento
-                    </button>
-                    <button
-                      onClick={() => setStatus(o, "Finalizada")}
-                      className="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
-                    >
-                      Finalizar
-                    </button>
-                    <button
-                      onClick={() => setStatus(o, "Aberta")}
-                      className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm hover:bg-slate-800"
-                    >
-                      Reabrir
-                    </button>
-                  </div>
+                <div className="btnGroup">
+                  {o.status === "ABERTA" ? (
+                    <button className="btnSecondary" onClick={() => onIniciar(o.id)}>Em andamento</button>
+                  ) : null}
+                  {o.status !== "FINALIZADA" ? (
+                    <button className="btnSecondary" onClick={() => onFinalizar(o.id)}>Finalizar</button>
+                  ) : null}
+                  <button className="btnDanger" onClick={() => onDelete(o.id)}>Excluir</button>
                 </div>
               </div>
             ))}
           </div>
         )}
       </section>
-    </div>
+    </main>
   );
 }

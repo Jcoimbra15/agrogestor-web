@@ -1,252 +1,203 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   addEstoqueItem,
   addMovimentacao,
   deleteEstoqueItem,
-  EstoqueItem,
+  getEstoqueAlertas,
   loadDB,
   MovTipo,
 } from "../lib/agroStore";
 
-function badgeStatus(it: EstoqueItem) {
-  const ok = (it.saldo ?? 0) > (it.minimo ?? 0);
-  return ok
-    ? "inline-flex rounded-full bg-emerald-500/15 px-2 py-1 text-xs text-emerald-300 border border-emerald-500/30"
-    : "inline-flex rounded-full bg-red-500/15 px-2 py-1 text-xs text-red-300 border border-red-500/30";
-}
-
 export default function EstoquePage() {
+  const [db, setDb] = useState(() => loadDB());
+  const [lastUpdated, setLastUpdated] = useState<string>(() => db?.meta?.lastUpdated ?? "");
+
+  // cadastrar item
   const [nome, setNome] = useState("");
   const [saldo, setSaldo] = useState<number>(0);
   const [minimo, setMinimo] = useState<number>(0);
 
-  const [itemId, setItemId] = useState<string>("");
-  const [tipo, setTipo] = useState<MovTipo>("Entrada");
-  const [qtd, setQtd] = useState<number>(0);
+  // movimentacao
+  const [itemId, setItemId] = useState("");
+  const [tipo, setTipo] = useState<MovTipo>("ENTRADA");
+  const [quantidade, setQuantidade] = useState<number>(0);
   const [obs, setObs] = useState("");
 
-  const [db, setDb] = useState(() => loadDB());
+  const itens = useMemo(() => (Array.isArray(db?.estoque) ? db.estoque : []), [db]);
+  const alertas = useMemo(() => getEstoqueAlertas(db), [db]);
+  const movimentos = useMemo(() => (Array.isArray(db?.movimentacoes) ? db.movimentacoes.slice(0, 30) : []), [db]);
 
   function refresh() {
-    setDb(loadDB());
+    const next = loadDB();
+    setDb(next);
+    setLastUpdated(next?.meta?.lastUpdated ?? "");
   }
 
-  useEffect(() => {
-    refresh();
-  }, []);
-
-  const items = db.estoque ?? [];
-
-  const itensOrdenados = useMemo(() => {
-    return [...items].sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [items]);
-
   function onAddItem() {
-    if (!nome.trim()) return;
-    addEstoqueItem(nome, saldo, minimo);
+    const next = addEstoqueItem((nome ?? "").trim(), Number(saldo) || 0, Number(minimo) || 0);
+    setDb(next);
+    setLastUpdated(next?.meta?.lastUpdated ?? "");
     setNome("");
     setSaldo(0);
     setMinimo(0);
-    refresh();
+  }
+
+  function onDeleteItem(id: string) {
+    const next = deleteEstoqueItem(id);
+    setDb(next);
+    setLastUpdated(next?.meta?.lastUpdated ?? "");
+    if (itemId === id) setItemId("");
   }
 
   function onAddMov() {
-    if (!itemId) return;
-    addMovimentacao(itemId, tipo, qtd, obs);
-    setQtd(0);
+    const next = addMovimentacao((itemId ?? "").trim(), tipo, Number(quantidade) || 0, (obs ?? "").trim());
+    setDb(next);
+    setLastUpdated(next?.meta?.lastUpdated ?? "");
+    setQuantidade(0);
     setObs("");
-    refresh();
-  }
-
-  function onDelete(id: string) {
-    deleteEstoqueItem(id);
-    refresh();
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <main className="contentWrap">
+      <div className="pageHeader">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Estoque</h1>
-          <p className="text-sm text-slate-300">
-            Cadastre produtos/insumos e registre entradas/saídas.
-          </p>
+          <h1 className="pageTitle">Estoque</h1>
+          <p className="pageSubtitle">Cadastre produtos/insumos e registre entradas/saídas.</p>
+          <p className="pageHint">Última atualização: {lastUpdated ? new Date(lastUpdated).toLocaleString() : "-"}</p>
         </div>
 
-        <div className="flex gap-2">
-          <button
-            onClick={refresh}
-            className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold hover:bg-slate-800"
-          >
-            Atualizar
-          </button>
-          <Link
-            href="/dashboard"
-            className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold hover:bg-slate-800"
-          >
-            Voltar
-          </Link>
+        <div className="pageActions">
+          <button className="btnSecondary" onClick={refresh}>Atualizar</button>
+          <Link className="btnSecondary" href="/dashboard">Voltar</Link>
         </div>
       </div>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/30 p-5 shadow">
-        <h2 className="text-lg font-bold">Cadastrar item</h2>
-
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-          <div className="md:col-span-1">
-            <label className="text-xs text-slate-400">Nome</label>
-            <input
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              className="mt-1 w-full rounded-lg border px-3 py-2"
-              placeholder="Ex: Sal mineral, Milho, Vacina..."
-            />
+      <section className="card">
+        <h2 className="sectionTitle">Cadastrar item</h2>
+        <div className="grid3">
+          <div className="field">
+            <label>Nome</label>
+            <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Sal mineral, Milho, Vacina..." />
           </div>
 
-          <div>
-            <label className="text-xs text-slate-400">Saldo</label>
-            <input
-              value={saldo}
-              onChange={(e) => setSaldo(Number(e.target.value))}
-              className="mt-1 w-full rounded-lg border px-3 py-2"
-              type="number"
-            />
+          <div className="field">
+            <label>Saldo</label>
+            <input type="number" value={saldo} onChange={(e) => setSaldo(Number(e.target.value))} min={0} />
           </div>
 
-          <div>
-            <label className="text-xs text-slate-400">Mínimo</label>
-            <input
-              value={minimo}
-              onChange={(e) => setMinimo(Number(e.target.value))}
-              className="mt-1 w-full rounded-lg border px-3 py-2"
-              type="number"
-            />
+          <div className="field">
+            <label>Mínimo</label>
+            <input type="number" value={minimo} onChange={(e) => setMinimo(Number(e.target.value))} min={0} />
           </div>
         </div>
 
-        <button
-          onClick={onAddItem}
-          className="mt-4 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
-        >
-          Adicionar
-        </button>
+        <div className="rowActions">
+          <button className="btnPrimary" onClick={onAddItem} disabled={!nome.trim()}>
+            Adicionar
+          </button>
+        </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/30 p-5 shadow">
-        <h2 className="text-lg font-bold">Registrar movimentação</h2>
+      <section className="card">
+        <h2 className="sectionTitle">Registrar movimentação</h2>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-          <div className="md:col-span-1">
-            <label className="text-xs text-slate-400">Item</label>
-            <select
-              value={itemId}
-              onChange={(e) => setItemId(e.target.value)}
-              className="mt-1 w-full rounded-lg border px-3 py-2"
-            >
+        <div className="grid4">
+          <div className="field">
+            <label>Item</label>
+            <select value={itemId} onChange={(e) => setItemId(e.target.value)}>
               <option value="">Selecione...</option>
-              {itensOrdenados.map((it) => (
-                <option key={it.id} value={it.id}>
-                  {it.nome}
+              {itens.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.nome} (saldo: {i.saldo})
                 </option>
               ))}
             </select>
           </div>
 
-          <div>
-            <label className="text-xs text-slate-400">Tipo</label>
-            <select
-              value={tipo}
-              onChange={(e) => setTipo(e.target.value as MovTipo)}
-              className="mt-1 w-full rounded-lg border px-3 py-2"
-            >
-              <option value="Entrada">Entrada</option>
-              <option value="Saida">Saída</option>
+          <div className="field">
+            <label>Tipo</label>
+            <select value={tipo} onChange={(e) => setTipo(e.target.value as MovTipo)}>
+              <option value="ENTRADA">Entrada</option>
+              <option value="SAIDA">Saída</option>
             </select>
           </div>
 
-          <div>
-            <label className="text-xs text-slate-400">Quantidade</label>
-            <input
-              value={qtd}
-              onChange={(e) => setQtd(Number(e.target.value))}
-              className="mt-1 w-full rounded-lg border px-3 py-2"
-              type="number"
-            />
+          <div className="field">
+            <label>Quantidade</label>
+            <input type="number" value={quantidade} onChange={(e) => setQuantidade(Number(e.target.value))} min={0} />
+          </div>
+
+          <div className="field">
+            <label>Obs (opcional)</label>
+            <input value={obs} onChange={(e) => setObs(e.target.value)} placeholder="Ex: NF / local / motivo..." />
           </div>
         </div>
 
-        <div className="mt-3">
-          <label className="text-xs text-slate-400">Obs (opcional)</label>
-          <input
-            value={obs}
-            onChange={(e) => setObs(e.target.value)}
-            className="mt-1 w-full rounded-lg border px-3 py-2"
-            placeholder="Ex: Entrada por compra / Saída para curral..."
-          />
+        <div className="rowActions">
+          <button className="btnPrimary" onClick={onAddMov} disabled={!itemId || quantidade <= 0}>
+            Registrar
+          </button>
         </div>
-
-        <button
-          onClick={onAddMov}
-          className="mt-4 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
-        >
-          Registrar
-        </button>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/30 p-5 shadow">
-        <h2 className="text-lg font-bold">Itens cadastrados</h2>
+      <section className="card">
+        <h2 className="sectionTitle">Itens</h2>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-slate-300">
-              <tr className="border-b border-slate-800">
-                <th className="py-2 text-left">Nome</th>
-                <th className="py-2 text-left">Saldo</th>
-                <th className="py-2 text-left">Mínimo</th>
-                <th className="py-2 text-left">Alerta</th>
-                <th className="py-2 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {itensOrdenados.map((it) => (
-                <tr key={it.id} className="border-b border-slate-900">
-                  <td className="py-2">{it.nome}</td>
-                  <td className="py-2">{it.saldo}</td>
-                  <td className="py-2">{it.minimo}</td>
-                  <td className="py-2">
-                    <span className={badgeStatus(it)}>
-                      {(it.saldo ?? 0) <= (it.minimo ?? 0) ? "Abaixo do mínimo" : "OK"}
-                    </span>
-                  </td>
-                  <td className="py-2 text-right">
-                    <button
-                      onClick={() => onDelete(it.id)}
-                      className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 hover:bg-slate-800"
-                    >
-                      Excluir
-                    </button>
-                  </td>
-                </tr>
-              ))}
-
-              {itensOrdenados.length === 0 && (
-                <tr>
-                  <td className="py-3 text-slate-400" colSpan={5}>
-                    Nenhum item cadastrado.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <p className="mt-3 text-xs text-slate-400">
-          Dica: se você atualizar a página, os dados continuam salvos (localStorage).
-        </p>
+        {itens.length === 0 ? (
+          <p className="muted">Nenhum item cadastrado.</p>
+        ) : (
+          <div className="list">
+            {itens.map((i) => (
+              <div className="listItem" key={i.id}>
+                <div>
+                  <div className="listTitle">{i.nome}</div>
+                  <div className="muted">Saldo: {i.saldo} • Mínimo: {i.minimo}</div>
+                </div>
+                <button className="btnDanger" onClick={() => onDeleteItem(i.id)}>Excluir</button>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
-    </div>
+
+      <section className="card">
+        <h2 className="sectionTitle">Alertas</h2>
+        {alertas.length === 0 ? (
+          <p className="muted">Sem alertas.</p>
+        ) : (
+          <div className="list">
+            {alertas.map((a) => (
+              <div className="listItem" key={a.id}>
+                <div>
+                  <div className="listTitle">{a.nome}</div>
+                  <div className="muted">Abaixo do mínimo (saldo {a.saldo} / mín {a.minimo})</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="card">
+        <h2 className="sectionTitle">Últimas movimentações</h2>
+        {movimentos.length === 0 ? (
+          <p className="muted">Nenhuma movimentação ainda.</p>
+        ) : (
+          <div className="list">
+            {movimentos.map((m) => (
+              <div className="listItem" key={m.id}>
+                <div>
+                  <div className="listTitle">{m.tipo} - {m.itemNome} ({m.quantidade})</div>
+                  <div className="muted">{m.obs ? m.obs : "—"}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </main>
   );
 }

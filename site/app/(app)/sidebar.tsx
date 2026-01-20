@@ -1,15 +1,16 @@
+// site/app/(app)/sidebar.tsx
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-type NavItem = { label: string; href: string };
+type Item = { href: string; label: string };
 
-const NAV: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard" },
-  { label: "Estoque", href: "/estoque" },
-  { label: "Rebanho", href: "/rebanho" },
-  { label: "Ordens de Serviço", href: "/os" },
+const items: Item[] = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/estoque", label: "Estoque" },
+  { href: "/rebanho", label: "Rebanho" },
+  { href: "/os", label: "Ordens de Serviço" },
 ];
 
 export default function Sidebar() {
@@ -17,25 +18,29 @@ export default function Sidebar() {
 
   return (
     <aside className="sidebar">
-      <div className="sidebar__brand">
-        <div className="sidebar__title">AgroGestor</div>
-        <div className="sidebar__subtitle">Gestão Rural Inteligente</div>
+      <div className="sidebarBrand">
+        <div className="brandTitle">AgroGestor</div>
+        <div className="brandSub">Gestão Rural Inteligente</div>
       </div>
 
-      <nav className="sidebar__nav">
-        {NAV.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(item.href + "/");
+      <nav className="sidebarNav">
+        {items.map((it) => {
+          const active =
+            pathname === it.href || (it.href !== "/dashboard" && pathname?.startsWith(it.href));
+
           return (
             <Link
-              key={item.href}
-              href={item.href}
-              className={`sidebar__link ${active ? "is-active" : ""}`}
+              key={it.href}
+              href={it.href}
+              className={`sidebarLink ${active ? "active" : ""}`}
             >
-              {item.label}
+              {it.label}
             </Link>
           );
         })}
       </nav>
+
+      <div className="sidebarFooter">v1.0 • localStorage</div>
     </aside>
   );
 }
