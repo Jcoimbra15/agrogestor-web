@@ -1,3 +1,5 @@
+export type MovTipo = "ENTRADA" | "SAIDA";
+
 export type EstoqueItem = {
   id: string;
   nome: string;
@@ -6,8 +8,6 @@ export type EstoqueItem = {
   criadoEm: string;
   atualizadoEm: string;
 };
-
-export type MovTipo = "Entrada" | "Saida";
 
 export type Movimentacao = {
   id: string;
@@ -19,9 +19,32 @@ export type Movimentacao = {
   data: string; // ISO
 };
 
-export type OSStatus = "Aberta" | "Em andamento" | "Finalizada";
+export type Sexo = "MACHO" | "FEMEA" | "NAO_INFORMADO";
+export type Categoria = "BEZERRO" | "GARROTE" | "NOVILHA" | "VACA" | "TOURO" | "OUTRO";
 
-export type OS = {
+export type Animal = {
+  id: string;
+  brinco: string;
+  sexo: Sexo;
+  categoria: Categoria;
+  lote?: string;
+  nascimento?: string; // yyyy-mm-dd
+  criadoEm: string;
+};
+
+export type Pesagem = {
+  id: string;
+  animalId: string;
+  brinco: string;
+  peso: number;
+  data: string; // yyyy-mm-dd
+  obs?: string;
+  criadoEm: string;
+};
+
+export type OSStatus = "ABERTA" | "EM_ANDAMENTO" | "FINALIZADA";
+
+export type OSItem = {
   id: string;
   titulo: string;
   responsavel: string;
@@ -30,104 +53,84 @@ export type OS = {
   atualizadoEm: string;
 };
 
-export type Sexo = "Macho" | "Fêmea" | "Não informado";
-export type Categoria = "Bezerro" | "Novilho" | "Vaca" | "Touro" | "Outro";
-
-export type Animal = {
-  id: string; // brinco/ID
-  sexo: Sexo;
-  categoria: Categoria;
-  lote?: string;
-  nascimento?: string; // YYYY-MM-DD
-  criadoEm: string;
-};
-
-export type Pesagem = {
-  id: string;
-  animalId: string;
-  pesoKg: number;
-  data: string; // YYYY-MM-DD
-  obs?: string;
-  criadoEm: string;
-};
-
 export type DB = {
   estoque: EstoqueItem[];
   movimentacoes: Movimentacao[];
-  os: OS[];
-  animais: Animal[];
+  rebanho: Animal[];
   pesagens: Pesagem[];
-  atualizadoEm: string; // ISO
+  os: OSItem[];
+  updatedAt: string;
 };
 
-const KEY = "agrogestor_db_v1";
+const KEY = "AGROGESTOR_DB_V1";
+
+function uid(prefix = "id") {
+  return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now()}`;
+}
 
 function nowISO() {
   return new Date().toISOString();
 }
 
-function uid(prefix: string) {
-  return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now()}`;
-}
-
 export function loadDB(): DB {
   if (typeof window === "undefined") {
+    // SSR: retorna vazio
     return {
       estoque: [],
       movimentacoes: [],
-      os: [],
-      animais: [],
+      rebanho: [],
       pesagens: [],
-      atualizadoEm: nowISO(),
+      os: [],
+      updatedAt: nowISO(),
     };
   }
+
   const raw = localStorage.getItem(KEY);
   if (!raw) {
     const empty: DB = {
       estoque: [],
       movimentacoes: [],
-      os: [],
-      animais: [],
+      rebanho: [],
       pesagens: [],
-      atualizadoEm: nowISO(),
+      os: [],
+      updatedAt: nowISO(),
     };
     localStorage.setItem(KEY, JSON.stringify(empty));
     return empty;
   }
 
   try {
-    const parsed = JSON.parse(raw) as DB;
-    // Garantir campos (caso tenha DB antigo)
+    const parsed = JSON.parse(raw) as Partial<DB>;
     return {
       estoque: parsed.estoque ?? [],
       movimentacoes: parsed.movimentacoes ?? [],
-      os: parsed.os ?? [],
-      animais: parsed.animais ?? [],
+      rebanho: parsed.rebanho ?? [],
       pesagens: parsed.pesagens ?? [],
-      atualizadoEm: parsed.atualizadoEm ?? nowISO(),
+      os: parsed.os ?? [],
+      updatedAt: parsed.updatedAt ?? nowISO(),
     };
   } catch {
     const empty: DB = {
       estoque: [],
       movimentacoes: [],
-      os: [],
-      animais: [],
+      rebanho: [],
       pesagens: [],
-      atualizadoEm: nowISO(),
+      os: [],
+      updatedAt: nowISO(),
     };
     localStorage.setItem(KEY, JSON.stringify(empty));
     return empty;
   }
 }
 
-export function saveDB(db: DB) {
-  const updated: DB = { ...db, atualizadoEm: nowISO() };
-  localStorage.setItem(KEY, JSON.stringify(updated));
+function saveDB(db: DB) {
+  db.updatedAt = nowISO();
+  if (typeof window !== "undefined") {
+    localStorage.setItem(KEY, JSON.stringify(db));
+  }
 }
 
-/* =========================
-   ESTOQUE
-========================= */
+/* ===== ESTOQUE ===== */
 export function addEstoqueItem(nome: string, saldo: number, minimo: number) {
   const db = loadDB();
   const item: EstoqueItem = {
@@ -140,10 +143,9 @@ export function addEstoqueItem(nome: string, saldo: number, minimo: number) {
   };
   db.estoque = [item, ...db.estoque];
   saveDB(db);
-  return item;
 }
 
-export function updateEstoqueItem(id: string, patch: Partial<Omit<EstoqueItem, "id">>) {
+export function updateEstoqueItem(id: string, patch: Partial<Omit<EstoqueItem, "id" | "criadoEm">>) {
   const db = loadDB();
   db.estoque = db.estoque.map((it) =>
     it.id === id ? { ...it, ...patch, atualizadoEm: nowISO() } : it
@@ -153,108 +155,125 @@ export function updateEstoqueItem(id: string, patch: Partial<Omit<EstoqueItem, "
 
 export function deleteEstoqueItem(id: string) {
   const db = loadDB();
-  const item = db.estoque.find((x) => x.id === id);
+  const it = db.estoque.find((x) => x.id === id);
   db.estoque = db.estoque.filter((x) => x.id !== id);
-  // também remove movimentações desse item
-  if (item) {
-    db.movimentacoes = db.movimentacoes.filter((m) => m.itemId !== item.id);
+
+  // também remove movimentações do item
+  if (it) {
+    db.movimentacoes = db.movimentacoes.filter((m) => m.itemId !== it.id);
   }
+
   saveDB(db);
 }
 
 export function addMovimentacao(itemId: string, tipo: MovTipo, quantidade: number, obs?: string) {
   const db = loadDB();
   const item = db.estoque.find((x) => x.id === itemId);
-  if (!item) throw new Error("Item não encontrado");
+  if (!item) return;
 
-  const qtd = Number(quantidade) || 0;
+  const q = Math.max(0, Number(quantidade) || 0);
+
+  // ajusta saldo
+  const novoSaldo = tipo === "ENTRADA" ? item.saldo + q : item.saldo - q;
+
+  db.estoque = db.estoque.map((x) =>
+    x.id === itemId ? { ...x, saldo: novoSaldo, atualizadoEm: nowISO() } : x
+  );
+
   const mov: Movimentacao = {
     id: uid("mov"),
     itemId,
     itemNome: item.nome,
     tipo,
-    quantidade: qtd,
-    obs: obs?.trim() || "",
+    quantidade: q,
+    obs: obs?.trim() ? obs.trim() : undefined,
     data: nowISO(),
   };
 
-  // atualiza saldo
-  const novoSaldo = tipo === "Entrada" ? item.saldo + qtd : item.saldo - qtd;
-  db.estoque = db.estoque.map((x) =>
-    x.id === item.id ? { ...x, saldo: novoSaldo, atualizadoEm: nowISO() } : x
-  );
-
   db.movimentacoes = [mov, ...db.movimentacoes];
   saveDB(db);
-  return mov;
 }
 
-/* =========================
-   OS
-========================= */
+/* ===== REBANHO ===== */
+export function addAnimal(data: {
+  brinco: string;
+  sexo: Sexo;
+  categoria: Categoria;
+  lote?: string;
+  nascimento?: string;
+}) {
+  const db = loadDB();
+  const animal: Animal = {
+    id: uid("ani"),
+    brinco: data.brinco.trim(),
+    sexo: data.sexo,
+    categoria: data.categoria,
+    lote: data.lote?.trim() ? data.lote.trim() : undefined,
+    nascimento: data.nascimento?.trim() ? data.nascimento.trim() : undefined,
+    criadoEm: nowISO(),
+  };
+  db.rebanho = [animal, ...db.rebanho];
+  saveDB(db);
+}
+
+export function deleteAnimal(animalId: string) {
+  const db = loadDB();
+  const ani = db.rebanho.find((a) => a.id === animalId);
+  db.rebanho = db.rebanho.filter((a) => a.id !== animalId);
+
+  // remove pesagens do animal
+  if (ani) db.pesagens = db.pesagens.filter((p) => p.animalId !== ani.id);
+
+  saveDB(db);
+}
+
+export function addPesagem(data: {
+  animalId: string;
+  peso: number;
+  data: string; // yyyy-mm-dd
+  obs?: string;
+}) {
+  const db = loadDB();
+  const ani = db.rebanho.find((a) => a.id === data.animalId);
+  if (!ani) return;
+
+  const pes: Pesagem = {
+    id: uid("pes"),
+    animalId: ani.id,
+    brinco: ani.brinco,
+    peso: Number(data.peso) || 0,
+    data: data.data,
+    obs: data.obs?.trim() ? data.obs.trim() : undefined,
+    criadoEm: nowISO(),
+  };
+
+  db.pesagens = [pes, ...db.pesagens];
+  saveDB(db);
+}
+
+/* ===== OS ===== */
 export function addOS(titulo: string, responsavel: string) {
   const db = loadDB();
-  const os: OS = {
+  const os: OSItem = {
     id: uid("os"),
     titulo: titulo.trim(),
     responsavel: responsavel.trim(),
-    status: "Aberta",
+    status: "ABERTA",
     criadoEm: nowISO(),
     atualizadoEm: nowISO(),
   };
   db.os = [os, ...db.os];
   saveDB(db);
-  return os;
 }
 
-export function updateOS(id: string, patch: Partial<Omit<OS, "id">>) {
+export function updateOS(id: string, patch: Partial<Omit<OSItem, "id" | "criadoEm">>) {
   const db = loadDB();
   db.os = db.os.map((o) => (o.id === id ? { ...o, ...patch, atualizadoEm: nowISO() } : o));
   saveDB(db);
 }
 
-/* =========================
-   REBANHO
-========================= */
-export function addAnimal(animal: Omit<Animal, "criadoEm">) {
+export function deleteOS(id: string) {
   const db = loadDB();
-  const exists = db.animais.some((a) => a.id === animal.id.trim());
-  if (exists) throw new Error("Já existe um animal com esse Brinco/ID");
-
-  const novo: Animal = {
-    ...animal,
-    id: animal.id.trim(),
-    criadoEm: nowISO(),
-  };
-
-  db.animais = [novo, ...db.animais];
+  db.os = db.os.filter((o) => o.id !== id);
   saveDB(db);
-  return novo;
-}
-
-export function deleteAnimal(id: string) {
-  const db = loadDB();
-  db.animais = db.animais.filter((a) => a.id !== id);
-  // remove pesagens do animal
-  db.pesagens = db.pesagens.filter((p) => p.animalId !== id);
-  saveDB(db);
-}
-
-export function addPesagem(animalId: string, pesoKg: number, data: string, obs?: string) {
-  const db = loadDB();
-  const animal = db.animais.find((a) => a.id === animalId);
-  if (!animal) throw new Error("Animal não encontrado");
-
-  const p: Pesagem = {
-    id: uid("pes"),
-    animalId,
-    pesoKg: Number(pesoKg) || 0,
-    data,
-    obs: obs?.trim() || "",
-    criadoEm: nowISO(),
-  };
-
-  db.pesagens = [p, ...db.pesagens];
-  saveDB(db);
-  return p;
 }

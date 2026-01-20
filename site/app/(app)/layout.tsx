@@ -1,16 +1,22 @@
-import type { ReactNode } from "react";
-import { ToastProvider } from "./toast";
 import Sidebar from "./sidebar";
 
-export default function AppLayout({ children }: { children: ReactNode }) {
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ToastProvider>
-      <div className="min-h-screen bg-[#0b1020] text-white">
-        <div className="flex">
-          <Sidebar />
-          <main className="flex-1 p-6">{children}</main>
-        </div>
+    <div className="appShell">
+      <Sidebar />
+      <div className="appMain">
+        <header className="topbar">
+          <div className="topbar__left">Painel</div>
+          <div className="topbar__right">
+            <span className="topbar__user">Olá, Usuário</span>
+            <a className="btn btn--ghost" href="/login">
+              Sair
+            </a>
+          </div>
+        </header>
+
+        <main className="content">{children}</main>
       </div>
-    </ToastProvider>
+    </div>
   );
 }

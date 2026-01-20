@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { loadDB, EstoqueItem, Movimentacao, OS } from "../lib/agroStore";
+import { DB, loadDB, Movimentacao } from "../lib/agroStore";
 
-function fmtDataHora(iso: string) {
+function fmtData(iso: string) {
   try {
     return new Date(iso).toLocaleString("pt-BR");
   } catch {
@@ -12,163 +12,139 @@ function fmtDataHora(iso: string) {
   }
 }
 
-function isToday(iso: string) {
-  const d = new Date(iso);
-  const now = new Date();
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-  );
-}
-
 export default function DashboardPage() {
-  const [lastUpdated, setLastUpdated] = useState<string>(() =>
-    new Date().toISOString()
-  );
+  const [db, setDb] = useState<DB>(() => loadDB());
 
-  // Carrega sempre do localStorage (db "real")
-  const db = useMemo(() => loadDB(), [lastUpdated]);
+  function atualizar() {
+    setDb(loadDB());
+  }
 
-  const estoqueCount = db.estoque?.length ?? 0;
+  useEffect(() => {
+    // garante que ao entrar a tela já puxe do localStorage
+    atualizar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const alertasCount =
-    db.estoque?.filter((i: EstoqueItem) => (i.saldo ?? 0) <= (i.minimo ?? 0))
-      .length ?? 0;
+  const estoqueCount = db.estoque.length;
+  const alertasCount = db.estoque.filter((it) => it.saldo < it.minimo).length;
 
-  const osHojeCount = db.os?.filter((o: OS) => isToday(o.data)).length ?? 0;
+  const osAbertasHoje = useMemo(() => {
+    const hoje = new Date().toISOString().slice(0, 10);
+    return db.os.filter((o) => o.criadoEm.slice(0, 10) === hoje && o.status === "ABERTA").length;
+  }, [db.os]);
 
-  // Última movimentação (mais recente)
-  const ultimaMov: Movimentacao | null = useMemo(() => {
-    const movs = (db.movimentacoes ?? []).slice();
-    movs.sort((a, b) => {
-      const ta = new Date(a.data).getTime();
-      const tb = new Date(b.data).getTime();
-      return tb - ta;
-    });
-    return movs[0] ?? null;
-  }, [db.movimentacoes]);
-
-  const onAtualizar = () => setLastUpdated(new Date().toISOString());
+  const movs: Movimentacao[] = db.movimentacoes ?? [];
+  const ultimaMov = movs.length > 0 ? movs[0] : null;
 
   return (
-    <main className="min-h-screen">
-      {/* topo simples (mantém seu layout geral) */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-4xl font-extrabold text-white tracking-tight">
-            Dashboard
-          </h1>
-          <p className="mt-1 text-sm text-white/70">
-            Visão geral do AgroGestor (dados reais do sistema).
-          </p>
-          <p className="mt-1 text-xs text-white/50">
-            Última atualização: {fmtDataHora(lastUpdated)}
-          </p>
+    <div className="appShell">
+      {/* Sidebar (links simples – se você já tiver sidebar.tsx pode manter) */}
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="brandTitle">AgroGestor</div>
+          <div className="brandSub">Gestão Rural Inteligente</div>
         </div>
 
-        <div className="flex gap-2">
-          <button
-            onClick={onAtualizar}
-            className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10"
-          >
-            Atualizar
-          </button>
-          <Link
-            href="/login"
-            className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10"
-          >
-            Sair
-          </Link>
-        </div>
-      </div>
+        <nav className="nav">
+          <Link className="navItem navItemActive" href="/dashboard">Dashboard</Link>
+          <Link className="navItem" href="/estoque">Estoque</Link>
+          <Link className="navItem" href="/rebanho">Rebanho</Link>
+          <Link className="navItem" href="/os">Ordens de Serviço</Link>
+        </nav>
+      </aside>
 
-      {/* CARD PRINCIPAL (agora azul, alinhado com a sidebar) */}
-      <section className="mt-6 rounded-2xl border border-white/10 bg-gradient-to-br from-[#0b1e3a]/80 via-[#0b1e3a]/65 to-white/10 p-6 shadow-[0_10px_40px_rgba(0,0,0,0.35)]">
-        <div className="grid gap-4 md:grid-cols-4">
-          <div className="rounded-xl border border-white/10 bg-black/25 p-4">
-            <p className="text-sm text-white/70">Estoque</p>
-            <p className="mt-1 text-3xl font-extrabold text-white">
-              {estoqueCount}
-            </p>
-            <p className="text-xs text-white/50">Itens cadastrados</p>
+      <main className="main">
+        <div className="topbar">
+          <div>
+            <p className="pageSub" style={{ margin: 0 }}>Painel</p>
           </div>
-
-          <div className="rounded-xl border border-white/10 bg-black/25 p-4">
-            <p className="text-sm text-white/70">Alertas</p>
-            <p className="mt-1 text-3xl font-extrabold text-white">
-              {alertasCount}
-            </p>
-            <p className="text-xs text-white/50">Abaixo do mínimo</p>
-          </div>
-
-          <div className="rounded-xl border border-white/10 bg-black/25 p-4">
-            <p className="text-sm text-white/70">Ordens de Serviço</p>
-            <p className="mt-1 text-3xl font-extrabold text-white">
-              {osHojeCount}
-            </p>
-            <p className="text-xs text-white/50">Registradas hoje</p>
-          </div>
-
-          <div className="rounded-xl border border-white/10 bg-black/25 p-4">
-            <p className="text-sm text-white/70">Movimentações</p>
-            <p className="mt-1 text-3xl font-extrabold text-white">
-              {db.movimentacoes?.length ?? 0}
-            </p>
-            <p className="text-xs text-white/50">Registradas</p>
+          <div className="row">
+            <div style={{ color: "rgba(255,255,255,.75)" }}>Olá, Usuário</div>
+            <button className="btn btnDark" type="button">Sair</button>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <div className="rounded-xl border border-white/10 bg-black/25 p-5">
-            <p className="text-lg font-bold text-white">Ações rápidas</p>
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Link
-                href="/estoque"
-                className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-bold text-black hover:bg-emerald-400"
-              >
-                Estoque
-              </Link>
-              <Link
-                href="/os"
-                className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10"
-              >
-                OS
-              </Link>
-              <Link
-                href="/rebanho"
-                className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10"
-              >
-                Rebanho
-              </Link>
+        <div className="container">
+          <div className="row" style={{ justifyContent: "space-between" }}>
+            <div>
+              <h1 className="pageTitle">Dashboard</h1>
+              <p className="pageSub">Visão geral do AgroGestor (dados reais do sistema).</p>
+              <p className="pageSub">Última atualização: {fmtData(db.updatedAt)}</p>
             </div>
 
-            <p className="mt-3 text-xs text-white/50">
-              Dica: se você atualizar os dados em outra tela e voltar aqui, clique
-              em “Atualizar”.
-            </p>
+            <div className="row">
+              <button className="btn btnDark" type="button" onClick={atualizar}>
+                Atualizar
+              </button>
+              <button className="btn btnDark" type="button">
+                Sair
+              </button>
+            </div>
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-black/25 p-5">
-            <p className="text-lg font-bold text-white">Última movimentação</p>
+          <div className="cardGrid">
+            <div className="card">
+              <div className="cardLabel">Estoque</div>
+              <div className="cardValue">{estoqueCount}</div>
+              <div className="cardHint">Itens cadastrados</div>
+            </div>
 
-            <p className="mt-2 text-sm text-white/80">
-              {ultimaMov ? (
-                <>
-                  <span className="font-semibold">{ultimaMov.tipo}</span> —{" "}
-                  {ultimaMov.itemNome} ({ultimaMov.quantidade})
-                  <span className="block mt-1 text-xs text-white/50">
-                    {fmtDataHora(ultimaMov.data)}
-                  </span>
-                </>
-              ) : (
-                "Nenhuma movimentação ainda."
-              )}
-            </p>
+            <div className="card">
+              <div className="cardLabel">Alertas</div>
+              <div className="cardValue">{alertasCount}</div>
+              <div className="cardHint">Abaixo do mínimo</div>
+            </div>
+
+            <div className="card">
+              <div className="cardLabel">Ordens de Serviço</div>
+              <div className="cardValue">{osAbertasHoje}</div>
+              <div className="cardHint">Abertas hoje</div>
+            </div>
+
+            <div className="card">
+              <div className="cardLabel">Movimentações</div>
+              <div className="cardValue">{movs.length}</div>
+              <div className="cardHint">Registradas</div>
+            </div>
+          </div>
+
+          <div className="hr" />
+
+          <div className="row" style={{ gap: 16, alignItems: "stretch" }}>
+            <section className="sectionBox" style={{ flex: 1 }}>
+              <h2 className="sectionTitle">Ações rápidas</h2>
+
+              <div className="row" style={{ marginTop: 12 }}>
+                <Link className="btn btnPrimary" href="/estoque">Estoque</Link>
+                <Link className="btn btnDark" href="/os">OS</Link>
+                <Link className="btn btnDark" href="/rebanho">Rebanho</Link>
+              </div>
+
+              <p className="pageSub" style={{ marginTop: 10 }}>
+                Dica: se você atualizar os dados em outra tela e voltar aqui, clique em “Atualizar”.
+              </p>
+            </section>
+
+            <section className="sectionBox" style={{ flex: 1 }}>
+              <h2 className="sectionTitle">Última movimentação</h2>
+
+              <div style={{ marginTop: 12, color: "rgba(255,255,255,.88)" }}>
+                {ultimaMov ? (
+                  <>
+                    <div style={{ fontWeight: 800 }}>
+                      {ultimaMov.tipo} - {ultimaMov.itemNome} ({ultimaMov.quantidade})
+                    </div>
+                    <div className="pageSub">Data: {fmtData(ultimaMov.data)}</div>
+                    {ultimaMov.obs ? <div className="pageSub">Obs: {ultimaMov.obs}</div> : null}
+                  </>
+                ) : (
+                  <div className="pageSub">Nenhuma movimentação ainda.</div>
+                )}
+              </div>
+            </section>
           </div>
         </div>
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }

@@ -1,24 +1,210 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* ===== AgroGestor - CSS Puro (sem Tailwind) ===== */
 
-/* Base do tema escuro */
 :root {
-  color-scheme: dark;
+  --bg: #0b1220;
+  --panel: #0f172a;
+  --panel-2: #111c33;
+  --card: #0f1a2f;
+  --border: rgba(255,255,255,.10);
+  --border-2: rgba(255,255,255,.14);
+  --text: rgba(255,255,255,.92);
+  --muted: rgba(255,255,255,.65);
+  --muted2: rgba(255,255,255,.45);
+  --green: #10b981;
+  --green2: #0ea371;
+  --danger: #ef4444;
+  --shadow: 0 10px 30px rgba(0,0,0,.35);
 }
 
-html,
+* { box-sizing: border-box; }
+html, body { height: 100%; }
 body {
-  height: 100%;
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  background: radial-gradient(1200px 600px at 30% 0%, rgba(16,185,129,.16), transparent 55%),
+              radial-gradient(900px 400px at 80% 10%, rgba(59,130,246,.12), transparent 60%),
+              var(--bg);
+  color: var(--text);
 }
 
-body {
-  @apply bg-slate-950 text-slate-100;
+a { color: inherit; text-decoration: none; }
+button, input, select { font: inherit; }
+
+/* ===== Layout (Sidebar + Conteúdo) ===== */
+.appShell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 280px 1fr;
 }
 
-/* Inputs e selects mais visíveis no dark */
-input,
-select,
-textarea {
-  @apply bg-slate-900 text-slate-100 placeholder:text-slate-500 border-slate-800;
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+  border-right: 1px solid var(--border);
+  padding: 18px 14px;
+}
+
+.brand {
+  padding: 10px 10px 16px 10px;
+}
+
+.brandTitle {
+  font-weight: 800;
+  font-size: 26px;
+  letter-spacing: .2px;
+  color: var(--green);
+  line-height: 1.1;
+}
+.brandSub {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.nav {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+.navItem {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  color: var(--text);
+  background: transparent;
+}
+.navItem:hover {
+  border-color: var(--border);
+  background: rgba(255,255,255,.03);
+}
+.navItemActive {
+  background: rgba(16,185,129,.15);
+  border-color: rgba(16,185,129,.25);
+}
+
+.main {
+  padding: 22px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+  box-shadow: var(--shadow);
+}
+
+.pageTitle {
+  font-size: 34px;
+  font-weight: 800;
+  margin: 0;
+}
+.pageSub {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.container {
+  margin-top: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255,255,255,.03);
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+
+/* ===== Componentes ===== */
+.row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.btn {
+  border: 1px solid var(--border-2);
+  background: rgba(255,255,255,.03);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.btn:hover { background: rgba(255,255,255,.06); }
+
+.btnPrimary {
+  background: var(--green);
+  border-color: rgba(16,185,129,.45);
+  color: #062012;
+  font-weight: 700;
+}
+.btnPrimary:hover { background: var(--green2); }
+
+.btnDark {
+  background: rgba(0,0,0,.25);
+  border-color: var(--border);
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+@media (max-width: 1100px) {
+  .cardGrid { grid-template-columns: repeat(2, minmax(160px, 1fr)); }
+}
+@media (max-width: 720px) {
+  .appShell { grid-template-columns: 1fr; }
+  .sidebar { position: relative; height: auto; }
+  .cardGrid { grid-template-columns: 1fr; }
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+  padding: 16px;
+}
+.cardLabel { color: var(--muted); font-size: 13px; }
+.cardValue { font-size: 34px; font-weight: 800; margin-top: 6px; }
+.cardHint { color: var(--muted2); font-size: 13px; margin-top: 4px; }
+
+.sectionTitle { font-size: 18px; font-weight: 800; margin: 0; }
+.sectionBox {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(0,0,0,.18);
+  padding: 16px;
+}
+
+.badgeOk {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(16,185,129,.15);
+  border: 1px solid rgba(16,185,129,.30);
+  color: rgba(255,255,255,.92);
+  font-size: 12px;
+}
+.badgeBad {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(239,68,68,.15);
+  border: 1px solid rgba(239,68,68,.30);
+  color: rgba(255,255,255,.92);
+  font-size: 12px;
+}
+
+.hr {
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0;
 }
