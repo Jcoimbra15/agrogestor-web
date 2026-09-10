@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b1714" />
+  <meta name="description" content="GadoHub — gestão rural inteligente para organizar rebanho, curral, pastagens, inventário, mapas e indicadores em um só lugar." />
+  <title>GadoHub — Gestão Rural Inteligente</title>
+  <style>
+    :root{
+      --bg:#08110f;--bg2:#0d1b17;--surface:#11231e;--card:#142a24;--line:rgba(255,255,255,.09);
+      --text:#f4f7f5;--muted:#a9bbb5;--green:#52c98c;--green2:#8ae6b3;--cream:#eef4ef;--dark:#07100d;
+      --shadow:0 24px 80px rgba(0,0,0,.28);--radius:22px;
+    }
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at 75% 0%,rgba(82,201,140,.13),transparent 34%),var(--bg);color:var(--text);line-height:1.55}
+    a{color:inherit;text-decoration:none}.wrap{width:min(1160px,calc(100% - 40px));margin:auto}
+    header{position:sticky;top:0;z-index:20;background:rgba(8,17,15,.78);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+    .nav{height:76px;display:flex;align-items:center;justify-content:space-between;gap:24px}.brand{display:flex;align-items:center;gap:12px;font-weight:850;font-size:22px;letter-spacing:-.5px}
+    .mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--green2),var(--green));display:grid;place-items:center;box-shadow:0 8px 28px rgba(82,201,140,.22)}
+    .mark svg{width:25px;height:25px}.links{display:flex;align-items:center;gap:26px;color:var(--muted);font-size:14px;font-weight:650}.links a:hover{color:white}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:46px;padding:0 19px;border-radius:13px;font-weight:800;font-size:14px;border:1px solid transparent;transition:.2s ease}.btn:hover{transform:translateY(-1px)}
+    .btn-primary{background:var(--green);color:var(--dark);box-shadow:0 12px 34px rgba(82,201,140,.22)}.btn-secondary{border-color:var(--line);background:rgba(255,255,255,.035);color:white}
+    .hero{padding:92px 0 72px}.hero-grid{display:grid;grid-template-columns:1.07fr .93fr;gap:64px;align-items:center}.eyebrow{display:inline-flex;align-items:center;gap:9px;padding:8px 12px;border:1px solid rgba(82,201,140,.25);background:rgba(82,201,140,.075);border-radius:999px;color:var(--green2);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 5px rgba(82,201,140,.10)}
+    h1{font-size:clamp(44px,6vw,76px);line-height:.98;letter-spacing:-.055em;margin:24px 0 24px;max-width:760px}h1 span{color:var(--green2)}.lead{font-size:18px;color:var(--muted);max-width:650px;margin:0 0 30px}.actions{display:flex;gap:12px;flex-wrap:wrap}
+    .trust{display:flex;gap:24px;flex-wrap:wrap;margin-top:34px;color:#cfddd8;font-size:13px}.trust span{display:flex;align-items:center;gap:7px}.check{color:var(--green);font-weight:900}
+    .device{position:relative;border:1px solid var(--line);border-radius:28px;background:linear-gradient(155deg,#142a24,#0b1814 72%);padding:18px;box-shadow:var(--shadow);overflow:hidden}.device:before{content:"";position:absolute;width:230px;height:230px;border-radius:50%;background:rgba(82,201,140,.14);filter:blur(50px);right:-90px;top:-100px}.window{position:relative;border:1px solid rgba(255,255,255,.08);border-radius:20px;background:#0d1a17;overflow:hidden}.window-top{height:49px;display:flex;align-items:center;gap:7px;padding:0 16px;border-bottom:1px solid var(--line)}.window-top i{width:8px;height:8px;border-radius:50%;background:#39534a}.screen{display:grid;grid-template-columns:95px 1fr;min-height:380px}.side{border-right:1px solid var(--line);padding:16px 10px}.side-logo{height:26px;border-radius:7px;background:rgba(82,201,140,.18);margin-bottom:20px}.side-line{height:9px;border-radius:9px;background:#243a33;margin:12px 3px}.side-line.active{background:var(--green);width:74%}.dash{padding:22px}.dash-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.dash-title strong{font-size:16px}.mini-pill{font-size:9px;padding:5px 8px;border-radius:999px;background:rgba(82,201,140,.11);color:var(--green2)}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat{padding:14px;border-radius:13px;background:#13251f;border:1px solid var(--line)}.stat small{display:block;color:#8fa59d;font-size:8px;text-transform:uppercase}.stat b{font-size:20px}.chart{height:135px;margin-top:12px;border-radius:14px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(82,201,140,.08),transparent),repeating-linear-gradient(0deg,transparent 0 26px,rgba(255,255,255,.035) 27px);position:relative;overflow:hidden}.chart svg{position:absolute;inset:15px;width:calc(100% - 30px);height:calc(100% - 30px)}.rows{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.row-card{height:70px;border-radius:13px;background:#11211c;border:1px solid var(--line);padding:12px}.row-card span{display:block;height:7px;background:#294139;border-radius:6px;margin-bottom:8px}.row-card span:nth-child(2){width:65%}
+    section{padding:82px 0}.section-kicker{color:var(--green2);font-weight:850;text-transform:uppercase;font-size:12px;letter-spacing:.1em}.section-title{font-size:clamp(32px,4vw,48px);line-height:1.05;letter-spacing:-.04em;margin:12px 0 18px}.section-copy{max-width:720px;color:var(--muted);font-size:17px}.features{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:38px}.feature{border:1px solid var(--line);background:rgba(255,255,255,.027);border-radius:var(--radius);padding:24px;min-height:210px;transition:.2s ease}.feature:hover{transform:translateY(-3px);border-color:rgba(82,201,140,.26);background:rgba(82,201,140,.045)}.ico{width:42px;height:42px;border-radius:12px;background:rgba(82,201,140,.12);display:grid;place-items:center;color:var(--green2);font-size:19px;font-weight:900}.feature h3{font-size:17px;margin:24px 0 8px}.feature p{font-size:13px;color:var(--muted);margin:0}
+    .light{background:var(--cream);color:#10201b}.light .section-copy{color:#587066}.light .section-kicker{color:#247751}.workflow{display:grid;grid-template-columns:.9fr 1.1fr;gap:58px;align-items:center}.steps{display:grid;gap:12px}.step{display:grid;grid-template-columns:46px 1fr;gap:16px;padding:19px;border:1px solid rgba(16,32,27,.09);background:white;border-radius:17px}.num{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:#e3f4ea;color:#16623f;font-weight:900}.step h3{font-size:16px;margin:0 0 4px}.step p{font-size:13px;color:#667b72;margin:0}
+    .future{padding:78px 0}.future-box{position:relative;overflow:hidden;border:1px solid rgba(82,201,140,.20);background:linear-gradient(135deg,#10251e,#0a1713);border-radius:30px;padding:52px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:30px}.future-box:after{content:"";position:absolute;width:300px;height:300px;border-radius:50%;background:rgba(82,201,140,.12);filter:blur(55px);right:-100px;bottom:-180px}.future-box h2{font-size:36px;letter-spacing:-.04em;margin:0 0 12px}.future-box p{color:var(--muted);margin:0;max-width:680px}.future-box .btn{position:relative;z-index:2}
+    footer{border-top:1px solid var(--line);padding:30px 0 40px;color:#80958d;font-size:13px}.foot{display:flex;justify-content:space-between;gap:20px;align-items:center}.foot-brand{color:white;font-weight:800}
+    @media(max-width:920px){.links>a:not(.btn){display:none}.hero{padding-top:64px}.hero-grid,.workflow{grid-template-columns:1fr}.hero-grid{gap:46px}.device{max-width:660px}.features{grid-template-columns:repeat(2,1fr)}.future-box{grid-template-columns:1fr}.screen{min-height:330px}}
+    @media(max-width:620px){.wrap{width:min(100% - 28px,1160px)}.nav{height:68px}.brand{font-size:19px}.mark{width:34px;height:34px}.links .btn{min-height:40px;padding:0 13px;font-size:12px}.hero{padding:50px 0 48px}h1{font-size:44px}.lead{font-size:16px}.actions{display:grid}.actions .btn{width:100%}.trust{gap:12px 20px}.device{padding:10px;border-radius:20px}.screen{grid-template-columns:65px 1fr;min-height:290px}.dash{padding:14px}.side{padding:12px 7px}.stats{gap:6px}.stat{padding:10px}.stat b{font-size:16px}.chart{height:105px}.rows{display:none}.features{grid-template-columns:1fr}.feature{min-height:0}.future-box{padding:30px 24px}.future-box h2{font-size:30px}.foot{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#inicio" aria-label="GadoHub">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 64 64" fill="none"><path d="M14 21c-6-1-9-6-10-12 8 1 13 5 16 11M50 21c6-1 9-6 10-12-8 1-13 5-16 11" stroke="#07100d" stroke-width="5" stroke-linecap="round"/><path d="M17 24c0-7 6-12 15-12s15 5 15 12v14c0 9-6 15-15 15s-15-6-15-15V24Z" fill="#07100d"/><path d="M23 28h3M38 28h3" stroke="#8ae6b3" stroke-width="4" stroke-linecap="round"/><path d="M25 42c4 3 10 3 14 0" stroke="#8ae6b3" stroke-width="3" stroke-linecap="round"/></svg>
+      </span>
+      GadoHub
+    </a>
+    <nav class="links">
+      <a href="#recursos">Recursos</a><a href="#como-funciona">Como funciona</a><a href="#evolucao">Evolução</a>
+      <a class="btn btn-primary" href="https://gadohub-producao.vercel.app" target="_blank" rel="noopener">Acessar sistema ↗</a>
+    </nav>
+  </div>
+</header>
+<main id="inicio">
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="eyebrow"><span class="dot"></span> Gestão rural inteligente</div>
+        <h1>O campo conectado à <span>decisão.</span></h1>
+        <p class="lead">O GadoHub reúne as principais rotinas da fazenda em um ambiente simples, organizado e preparado para acompanhar a operação no escritório e no campo.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="https://gadohub-producao.vercel.app" target="_blank" rel="noopener">Acessar o GadoHub ↗</a>
+          <a class="btn btn-secondary" href="#recursos">Conhecer recursos ↓</a>
+        </div>
+        <div class="trust"><span><b class="check">✓</b> Acesso pelo computador</span><span><b class="check">✓</b> Experiência mobile</span><span><b class="check">✓</b> Dados centralizados</span></div>
+      </div>
+      <div class="device" aria-label="Representação do painel GadoHub">
+        <div class="window">
+          <div class="window-top"><i></i><i></i><i></i></div>
+          <div class="screen">
+            <aside class="side"><div class="side-logo"></div><div class="side-line active"></div><div class="side-line"></div><div class="side-line"></div><div class="side-line"></div><div class="side-line"></div></aside>
+            <div class="dash">
+              <div class="dash-title"><strong>Visão da fazenda</strong><span class="mini-pill">● conectado</span></div>
+              <div class="stats"><div class="stat"><small>Rebanho</small><b>1.248</b></div><div class="stat"><small>Lotes</small><b>18</b></div><div class="stat"><small>Pastos</small><b>26</b></div></div>
+              <div class="chart"><svg viewBox="0 0 400 120" preserveAspectRatio="none"><polyline points="0,94 52,82 104,88 150,62 200,69 255,40 312,49 360,25 400,33" fill="none" stroke="#52c98c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="rows"><div class="row-card"><span></span><span></span></div><div class="row-card"><span></span><span></span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="recursos">
+    <div class="wrap">
+      <div class="section-kicker">Uma visão única da operação</div>
+      <h2 class="section-title">Informação da fazenda no lugar certo.</h2>
+      <p class="section-copy">Do manejo ao acompanhamento gerencial, o GadoHub organiza informações essenciais para reduzir controles dispersos e facilitar as decisões do dia a dia.</p>
+      <div class="features">
+        <article class="feature"><div class="ico">◉</div><h3>Rebanho e animais</h3><p>Cadastro, identificação, histórico, lotes, nascimentos, pesagens e movimentações reunidos por animal.</p></article>
+        <article class="feature"><div class="ico">↔</div><h3>Curral e inventário</h3><p>Rotinas de manejo, conferência de brincos e operações de curral com foco em agilidade no campo.</p></article>
+        <article class="feature"><div class="ico">⌁</div><h3>Pastagens e mapa</h3><p>Organização de pastos, piquetes, estruturas e visualização espacial para apoiar a gestão da fazenda.</p></article>
+        <article class="feature"><div class="ico">▤</div><h3>Estoque e compras</h3><p>Controle de entradas, consumo, materiais e compras conectado às necessidades da operação.</p></article>
+        <article class="feature"><div class="ico">$</div><h3>Financeiro</h3><p>Visão financeira integrada para acompanhar movimentações e apoiar o planejamento da atividade.</p></article>
+        <article class="feature"><div class="ico">▥</div><h3>Relatórios</h3><p>Indicadores e informações organizadas para transformar registros do campo em acompanhamento gerencial.</p></article>
+        <article class="feature"><div class="ico">☁</div><h3>Sincronização</h3><p>Estrutura preparada para manter os dados disponíveis entre diferentes dispositivos e ambientes de uso.</p></article>
+        <article class="feature"><div class="ico">⌂</div><h3>Multi-fazenda</h3><p>Arquitetura pensada para organizar propriedades e operações separadamente em um único ecossistema.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="como-funciona" class="light">
+    <div class="wrap workflow">
+      <div>
+        <div class="section-kicker">Do registro à gestão</div>
+        <h2 class="section-title">Feito para acompanhar a rotina real da fazenda.</h2>
+        <p class="section-copy">O GadoHub nasce da operação: registrar o que acontece, manter histórico e transformar esses dados em uma visão mais clara do negócio.</p>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="num">01</div><div><h3>Registre no campo</h3><p>Animais, manejos, pesagens, vacinas, movimentações e demais rotinas ficam organizados no sistema.</p></div></div>
+        <div class="step"><div class="num">02</div><div><h3>Centralize a informação</h3><p>Os dados deixam de ficar espalhados e passam a formar um histórico único para consulta e acompanhamento.</p></div></div>
+        <div class="step"><div class="num">03</div><div><h3>Acompanhe e decida</h3><p>Dashboards, relatórios e indicadores ajudam a enxergar a operação e apoiar decisões com mais contexto.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="evolucao" class="future">
+    <div class="wrap">
+      <div class="future-box">
+        <div>
+          <div class="section-kicker">Em evolução contínua</div>
+          <h2>Construído no campo. Preparado para crescer.</h2>
+          <p>O GadoHub está sendo aprimorado a partir do uso real da operação rural. Novos recursos, integrações e melhorias serão incorporados conforme o projeto amadurece.</p>
+        </div>
+        <a class="btn btn-primary" href="https://gadohub-producao.vercel.app" target="_blank" rel="noopener">Acessar sistema ↗</a>
+      </div>
+    </div>
+  </section>
+</main>
+<footer>
+  <div class="wrap foot"><div><span class="foot-brand">GadoHub</span> · Gestão Rural Inteligente</div><div>© 2026 GadoHub. Projeto em evolução.</div></div>
+</footer>
+</body>
+</html>
