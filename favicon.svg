@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="GadoHub">
+  <rect width="64" height="64" rx="14" fill="#0B6B3A"/>
+  <path d="M14 21c-6-1-9-6-10-12 8 1 13 5 16 11M50 21c6-1 9-6 10-12-8 1-13 5-16 11" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <path d="M17 24c0-7 6-12 15-12s15 5 15 12v14c0 9-6 15-15 15s-15-6-15-15V24Z" fill="#fff"/>
+  <path d="M23 28h3M38 28h3" stroke="#0B6B3A" stroke-width="4" stroke-linecap="round"/>
+  <path d="M25 42c4 3 10 3 14 0" stroke="#0B6B3A" stroke-width="3" stroke-linecap="round" fill="none"/>
+</svg>
